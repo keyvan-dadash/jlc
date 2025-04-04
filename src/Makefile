@@ -10,7 +10,37 @@ LEXER=${JAVA} ${JAVA_FLAGS} JLex.Main
 LEXER_FLAGS=
 all : test
 
-test : absyn javalette/Yylex.class javalette/PrettyPrinter.class javalette/Test.class javalette/VisitSkel.class javalette/ComposVisitor.class javalette/AbstractVisitor.class javalette/FoldVisitor.class javalette/AllVisitor.class javalette/parser.class javalette/sym.class javalette/Test.class
+test : absyn javalette/Yylex.class \
+				javalette/PrettyPrinter.class \
+				javalette/Test.class \
+				javalette/VisitSkel.class \
+				javalette/ComposVisitor.class \
+				javalette/AbstractVisitor.class \
+				javalette/FoldVisitor.class \
+				javalette/AllVisitor.class \
+				javalette/parser.class \
+				javalette/sym.class \
+				javalette/Add.class \
+				javalette/And.class \
+				javalette/Ass.class \
+				javalette/BooleanVariable.class \
+				javalette/Ctx.class \
+				javalette/Div.class \
+				javalette/DoubleVariable.class \
+				javalette/Function.class \
+				javalette/IntVariable.class \
+				javalette/Interpret.class \
+				javalette/Mul.class \
+				javalette/FnVisit.class \
+				javalette/Neg.class \
+				javalette/Not.class \
+				javalette/Operation.class \
+				javalette/OperationError.class \
+				javalette/Or.class \
+				javalette/Variable.class \
+				javalette/VoidVariable.class \
+				javalette/TypeCheckerVisit.class \
+				javalette/Rel.class
 
 .PHONY : absyn
 
