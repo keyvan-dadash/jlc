@@ -4,9 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import javax.management.RuntimeErrorException;
-
 public class TypeCheckerVisit {
+    public Variable GetVariableFromCtxOrPreviousCtx(Ctx ctx, String identifier) {
+        while (true) {
+            Variable var = ctx.ctx_variables.get(identifier);
+            if (var == null) {
+                ctx = ctx.parent;
+            if (ctx == null) {
+                return null;
+            }
+            } else {
+                return var;
+            }
+        }
+    }
     public class ProgVisitor implements javalette.Absyn.Prog.Visitor<Ctx, Ctx> {
         public Ctx visit(javalette.Absyn.Program p, Ctx ctx) {
           ctx = this.ctx;
@@ -37,7 +48,15 @@ public class TypeCheckerVisit {
             ctx.ctx_variables.remove("last");
           }
 
-          ctx = p.blk_.accept(new BlkVisitor(), ctx);
+          Ctx tmp_ctx = ctx.GetNewChildCtx();
+          tmp_ctx.parent = null;
+          Function fn = ctx.functions.get(p.ident_);
+          for (Variable arg : fn.func_args) {
+            tmp_ctx.ctx_variables.put(arg.GetVariableName(), arg);
+          }
+          tmp_ctx.ctx_return_variable = fn.return_var;
+
+          tmp_ctx = p.blk_.accept(new BlkVisitor(), tmp_ctx);
           return ctx;
         }
       }
@@ -53,27 +72,27 @@ public class TypeCheckerVisit {
     
       public class BlkVisitor implements javalette.Absyn.Blk.Visitor<Ctx, Ctx> {
         public Ctx visit(javalette.Absyn.Block p, Ctx ctx) {
-          
-          Ctx tmp_ctx = ctx.GetNewChildCtx();
+          System.out.println("new block!");
           for (javalette.Absyn.Stmt x: p.liststmt_) {
-            tmp_ctx = x.accept(new StmtVisitor(), tmp_ctx);
+            ctx = x.accept(new StmtVisitor(), ctx);
           }
+
           return ctx;
         }
       }
     
       public class StmtVisitor implements javalette.Absyn.Stmt.Visitor<Ctx, Ctx> {
         public Ctx visit(javalette.Absyn.Empty p, Ctx ctx) {
-          
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.BStmt p, Ctx ctx) {
-          
-          ctx = p.blk_.accept(new BlkVisitor(), ctx);
+          Ctx tmpCtx = ctx.GetNewChildCtx();
+          tmpCtx = p.blk_.accept(new BlkVisitor(), tmpCtx);
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Decl p, Ctx ctx) {
-          
           p.type_.accept(new TypeVisitor(), ctx);
           for (javalette.Absyn.Item x: p.listitem_) {
             ctx = x.accept(new ItemVisitor(), ctx);
@@ -91,57 +110,135 @@ public class TypeCheckerVisit {
 
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Ass p, Ctx ctx) {
-          
+          // Clear the varirables tmp
+          ctx.ctx_variables.remove("last");
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
+
+          // What is the result of experesion?
+          Variable var = ctx.ctx_variables.get("last");
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+
+          // Variable does not exist
+          if (left_side_var == null) {
+            throw new RuntimeException("left side vairable does not exist");
+          }
+
+          Operation op = new Ass();
+
+          // The return does not matter since we dont care about the return of assignment.
+          Variable _return_var = op.Execute(left_side_var, var);
+
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Incr p, Ctx ctx) {
+          // This is same as add with one
+          ctx.ctx_variables.remove("last");
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+
+          // Variable does not exist
+          if (left_side_var == null) {
+            throw new RuntimeException("left side vairable does not exist");
+          }
           
+          Operation op = new Add();
+
+          // The return does not matter since we dont care about the return of increment.
+          Variable _return_var = op.Execute(left_side_var, new IntVariable("+1"));
+
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Decr p, Ctx ctx) {
+          // This is same as add with one
+          ctx.ctx_variables.remove("last");
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+
+          // Variable does not exist
+          if (left_side_var == null) {
+            throw new RuntimeException("left side vairable does not exist");
+          }
           
+          Operation op = new Add();
+
+          // The return does not matter since we dont care about the return of increment.
+          Variable _return_var = op.Execute(left_side_var, new IntVariable("-1"));
+
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Ret p, Ctx ctx) {
           // Clear the varirables tmp
           ctx.ctx_variables.remove("last");
-          
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable exper_result = ctx.ctx_variables.get("last");
+          ctx.ctx_variables.remove("last");
+          if (!ctx.ctx_return_variable.IsSameAs(exper_result)) {
+            throw new RuntimeException("expression result has incompatible type with the function's return");
+          }
+
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.VRet p, Ctx ctx) {
           // Clear the varirables tmp
           ctx.ctx_variables.remove("last");
+          if (!ctx.ctx_return_variable.IsSameAs(new VoidVariable("tmp"))) {
+            throw new RuntimeException("void has incompatible type with the function's return");
+          }
+
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.Cond p, Ctx ctx) {
+
+            // Clear the varirables tmp
+          ctx.ctx_variables.remove("last");
           
         ctx = p.expr_.accept(new ExprVisitor(), ctx);
+        Variable exper_result = ctx.ctx_variables.get("last");
+          ctx.ctx_variables.remove("last");
+          if (!exper_result.IsSameAs(new BooleanVariable("tmp"))) {
+            throw new RuntimeException("result of while condition should be boolean");
+          }
         ctx = p.stmt_.accept(new StmtVisitor(), ctx);
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.CondElse p, Ctx ctx) {
           
           // Clear the varirables tmp
           ctx.ctx_variables.remove("last");
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
-
+          Variable exper_result = ctx.ctx_variables.get("last");
+          ctx.ctx_variables.remove("last");
+          if (!exper_result.IsSameAs(new BooleanVariable("tmp"))) {
+            throw new RuntimeException("result of while condition should be boolean");
+          }
 
           ctx = p.stmt_1.accept(new StmtVisitor(), ctx);
           ctx = p.stmt_2.accept(new StmtVisitor(), ctx);
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.While p, Ctx ctx) {
           
           // Clear the varirables tmp
           ctx.ctx_variables.remove("last");
 
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable exper_result = ctx.ctx_variables.get("last");
+          ctx.ctx_variables.remove("last");
+          if (!exper_result.IsSameAs(new BooleanVariable("tmp"))) {
+            throw new RuntimeException("result of while condition should be boolean");
+          }
+
           ctx = p.stmt_.accept(new StmtVisitor(), ctx);
           return ctx;
         }
+
         public Ctx visit(javalette.Absyn.SExp p, Ctx ctx) {
 
           // Clear the varirables tmp
@@ -159,8 +256,16 @@ public class TypeCheckerVisit {
         }
 
         public Ctx visit(javalette.Absyn.Init p, Ctx ctx) {
-          
+          Variable var = ctx.ctx_variables.get("last");
+          // Clear the varirables tmp
+          ctx.ctx_variables.remove("last");
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable exper_result = ctx.ctx_variables.get("last");
+          if (!var.IsSameAs(exper_result)) {
+            throw new RuntimeException("reuslt of experions is incompatible with variable type");
+          }
+          exper_result.SetVariableName(p.ident_);
+
           return ctx;
         }
       }
@@ -198,7 +303,7 @@ public class TypeCheckerVisit {
     
       public class ExprVisitor implements javalette.Absyn.Expr.Visitor<Ctx, Ctx> {
         public Ctx visit(javalette.Absyn.EVar p, Ctx ctx) {
-          Variable var = ctx.ctx_variables.get(p.ident_);
+          Variable var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
           if (var == null) {
             throw new RuntimeException("variable " + p.ident_ + " has not been declared");
           }
@@ -284,7 +389,7 @@ public class TypeCheckerVisit {
         }
 
         public Ctx visit(javalette.Absyn.EString p, Ctx ctx) {
-          
+          // TODO: idk what the fuck are these 
           return ctx;
         }
 

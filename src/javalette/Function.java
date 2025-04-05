@@ -20,7 +20,7 @@ public class Function {
         }
 
         for (int i = 0; i < args.size(); i++) {
-            if (!func_args.get(i).IsSameAs(args.get(i)) && args.get(i).IsConvertableTo(func_args.get(i))) {
+            if (!func_args.get(i).IsSameAs(args.get(i))) {
                 throw new RuntimeException("Incompatible argument types");
             }
         }
