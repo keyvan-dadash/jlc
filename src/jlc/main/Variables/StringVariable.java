@@ -1,9 +1,9 @@
 package jlc.main.Variables;
 
-public class DoubleVariable implements Variable {
+public class StringVariable implements Variable {
     private String name;
 
-    public DoubleVariable(String name) {
+    public StringVariable(String name) {
         this.name = name;
     }
 
@@ -19,22 +19,22 @@ public class DoubleVariable implements Variable {
 
     @Override
     public VariableType GetVariableType() {
-        return VariableType.Double;
+        return VariableType.String;
     }
 
     @Override
     public void SetVariableType(VariableType type) {
-        if (type != VariableType.Double)
-            throw new IllegalArgumentException("DoubleVariable can only have type Double");
+        if (type != VariableType.String)
+            throw new IllegalArgumentException("StringVariable can only have type String");
     }
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.Double;
+        return var != null && var.GetVariableType() == VariableType.String;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new DoubleVariable("last");
+        return new StringVariable("last");
     }
 }

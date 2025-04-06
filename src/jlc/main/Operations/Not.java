@@ -24,7 +24,11 @@ public class Not implements Operation {
             return tmp_bool.GetNewVariableSameType();
         }
 
-        throw new OperationError("operation not is not possible on " + var1.GetVariableType() + " and " + tmp_bool.GetVariableType());
+        String error_str = String.format(
+            "operation not is not possible on %s(%s)",
+            var1.GetVariableName(),
+            var1.GetVariableType());
+        throw new OperationError(error_str);
     }
 }
 

@@ -29,11 +29,6 @@ public class VoidVariable implements Variable {
     }
 
     @Override
-    public boolean IsConvertableTo(Variable var) {
-        return false;
-    }
-
-    @Override
     public boolean IsSameAs(Variable var) {
         return var != null && var.GetVariableType() == VariableType.Void;
     }

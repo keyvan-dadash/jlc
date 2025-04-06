@@ -2,6 +2,9 @@ package jlc.main;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 import jlc.lib.javalette.*;
 import jlc.main.Variables.Variable;
@@ -9,29 +12,54 @@ import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.VoidVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
+import jlc.main.Variables.StringVariable;
 
 public class FnVisit {
+    public static final Logger logger = Logger.getLogger(FnVisit.class.getName());
+
     public class ProgVisitor implements jlc.lib.javalette.Absyn.Prog.Visitor<Ctx, Ctx> {
         public Ctx visit(jlc.lib.javalette.Absyn.Program p, Ctx ctx) {
           ctx = this.ctx;
+
           SetDefaultFn(ctx);
           for (jlc.lib.javalette.Absyn.TopDef x: p.listtopdef_) {
             ctx = x.accept(new TopDefVisitor(), ctx);
           }
+
+          // Check the requirements for the main function
+          Function main = ctx.functions.get("main");
+          if (main == null) {
+            throw new RuntimeException("there isnt any main function in the program");
+          } else {
+            if (!main.return_var.IsSameAs(new IntVariable(""))) {
+              throw new RuntimeException("the main function's return type should be integer");
+            }
+
+            if (main.func_args.size() != 0) {
+              throw new RuntimeException("the main function does not get any argument");
+            }
+          }
+
           return ctx;
         }
 
         public Ctx ctx;
 
+        // SetCtx will set a ctx that vistor should use.
         public void SetCtx(Ctx ctx) {
+            logger.fine("Setting up ctx");
             this.ctx = ctx;
         }
 
+        // GetCtx returns the ctx that this vistor uses.
         public Ctx GetCtx() {
             return this.ctx;
         }
 
+        // SetDefaultFn sets the difault functions we have in javaletter.
+        // These functions are printInt, printDouble, printString, readInt and readDouble.
         public void SetDefaultFn(Ctx ctx) {
+            logger.fine("Setting up default functions");
             Function printInt = new Function(
                 new ArrayList<>(Arrays.asList(new IntVariable("n"))), 
                 new VoidVariable("return_printInt"), 
@@ -39,26 +67,26 @@ public class FnVisit {
             ctx.functions.put("printInt", printInt);
 
             Function printDouble = new Function(
-                new ArrayList<>(Arrays.asList(new DoubleVariable("n"))), 
+                new ArrayList<>(Arrays.asList(new DoubleVariable("x"))), 
                 new VoidVariable("return_printDouble"), 
                 "printDouble");
             ctx.functions.put("printDouble", printDouble);
             
             // Fix this
             Function printString = new Function(
-                new ArrayList<>(Arrays.asList(new DoubleVariable("n"))), 
+                new ArrayList<>(Arrays.asList(new StringVariable("s"))), 
                 new VoidVariable("return_printString"), 
                 "printString");
             ctx.functions.put("printString", printString);
             
             Function readInt = new Function(
-                new ArrayList<>(Arrays.asList(new VoidVariable("n"))), 
+                new ArrayList<>(Arrays.asList()), 
                 new IntVariable("return_readInt"), 
                 "readInt");
             ctx.functions.put("readInt", readInt);
 
             Function readDouble = new Function(
-                new ArrayList<>(Arrays.asList(new VoidVariable("n"))), 
+                new ArrayList<>(Arrays.asList()), 
                 new DoubleVariable("return_readDouble"), 
                 "readDouble");
             ctx.functions.put("readDouble", readDouble);
@@ -67,11 +95,11 @@ public class FnVisit {
     
       public class TopDefVisitor implements jlc.lib.javalette.Absyn.TopDef.Visitor<Ctx, Ctx> {
         public Ctx visit(jlc.lib.javalette.Absyn.FnDef p, Ctx ctx) {
-          
+          logger.finer(String.format("processing function %s", p.ident_));
 
           Function fn = ctx.functions.get(p.ident_);
           if (fn != null) {
-            throw new RuntimeException("Dublication function");
+            throw new RuntimeException(String.format("function %s has been declared before", p.ident_));
           } else {
             ctx.functions.put(p.ident_, new Function());
             fn = ctx.functions.get(p.ident_);
@@ -80,19 +108,47 @@ public class FnVisit {
           ctx = p.type_.accept(new TypeVisitor(), ctx);
 
           // Pop the return variable and set it on function
-          Variable last = ctx.ctx_variables.get("last");
+          Variable last = ctx.last_expr_result;
           last.SetVariableName(p.ident_ + "_return");
           fn.return_var = last;
           fn.SetFunctionName(p.ident_);
-          ctx.ctx_variables.remove("last");
+          ctx.last_expr_result = null;
+
+          logger.finest(String.format("function %s return type is", p.ident_, fn.GetReturn().GetVariableType()));
 
           for (jlc.lib.javalette.Absyn.Arg x: p.listarg_) {
             ctx = x.accept(new ArgVisitor(), ctx);
 
             // Remove args variable form ctx
-            Variable fn_arg = ctx.ctx_variables.get("last");
-            ctx.ctx_variables.remove("last");
+            Variable fn_arg = ctx.last_expr_result;
+            ctx.last_expr_result = null;
             fn.func_args.add(fn_arg);
+            logger.finest(String.format("processed function %s with arg type %s", p.ident_, fn_arg.GetVariableType()));
+          }
+
+          // Verify the signiture of functions.
+          // Two conditions should be hold:
+          // 1. a function shouldnt have two param with the same name
+          // 2. a function param cannot be declare as void
+          Map<String, Boolean> fn_args = new HashMap<>();
+          for (Variable arg : fn.func_args) {
+            if (fn_args.containsKey(arg.GetVariableName())) {
+                // found a duplicate param name
+                throw new RuntimeException(String.format(
+                    "funtion %s has multiple params with the name of %s",
+                    fn.fn_name,
+                    arg.GetVariableName()));
+            }
+
+            if (arg.IsSameAs(new VoidVariable(""))) {
+                // found param with void type
+                throw new RuntimeException(String.format(
+                    "funtion %s has a param(%s) with the type of void",
+                    fn.fn_name,
+                    arg.GetVariableName()));
+            }
+
+            fn_args.put(arg.GetVariableName(), true);
           }
 
           ctx = p.blk_.accept(new BlkVisitor(), ctx);
@@ -102,9 +158,8 @@ public class FnVisit {
     
       public class ArgVisitor implements jlc.lib.javalette.Absyn.Arg.Visitor<Ctx, Ctx> {
         public Ctx visit(jlc.lib.javalette.Absyn.Argument p, Ctx ctx) {
-          
           ctx = p.type_.accept(new TypeVisitor(), ctx);
-          Variable last = ctx.ctx_variables.get("last");
+          Variable last = ctx.last_expr_result;
           last.SetVariableName(p.ident_);
           return ctx;
         }
@@ -201,22 +256,22 @@ public class FnVisit {
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<Ctx, Ctx> {
         public Ctx visit(jlc.lib.javalette.Absyn.Int p, Ctx ctx) {
           
-          ctx.ctx_variables.put("last", new IntVariable("last"));
+          ctx.last_expr_result = new IntVariable("last");
           return ctx;
         }
         public Ctx visit(jlc.lib.javalette.Absyn.Doub p, Ctx ctx) {
           
-          ctx.ctx_variables.put("last", new DoubleVariable("last"));
+          ctx.last_expr_result = new DoubleVariable("last");
           return ctx;
         }
         public Ctx visit(jlc.lib.javalette.Absyn.Bool p, Ctx ctx) {
           
-          ctx.ctx_variables.put("last", new BooleanVariable("last"));
+          ctx.last_expr_result = new BooleanVariable("last");
           return ctx;
         }
         public Ctx visit(jlc.lib.javalette.Absyn.Void p, Ctx ctx) {
           
-          ctx.ctx_variables.put("last", new VoidVariable("last"));
+          ctx.last_expr_result = new VoidVariable("last");
           return ctx;
         }
         public Ctx visit(jlc.lib.javalette.Absyn.Fun p, Ctx ctx) {

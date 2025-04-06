@@ -21,7 +21,13 @@ public class Or implements Operation {
             return var2.GetNewVariableSameType();
         }
 
-        throw new OperationError("operation or is not possible on " + var1.GetVariableType() + " and " + var2.GetVariableType());
+        String error_str = String.format(
+            "operation or is not possible on %s(%s) and %s(%s)",
+            var1.GetVariableName(),
+            var1.GetVariableType(),
+            var2.GetVariableName(), 
+            var2.GetVariableType());
+        throw new OperationError(error_str);
     }
 }
 

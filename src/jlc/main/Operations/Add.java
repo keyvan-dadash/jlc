@@ -10,9 +10,12 @@ public class Add implements Operation {
 
     public Map<VariableType, VariableType> execute_allowance;
 
-    public Add() {
+    public AddType typeOfOperation;
+
+    public Add(AddType typeOfOperation) {
         execute_allowance = new HashMap<>();
 
+        this.typeOfOperation = typeOfOperation;
         execute_allowance.put(VariableType.Int, VariableType.Int);
         execute_allowance.put(VariableType.Double, VariableType.Double);
     }
@@ -24,6 +27,12 @@ public class Add implements Operation {
             return var2.GetNewVariableSameType();
         }
 
-        throw new OperationError("operation add is not possible on " + var1.GetVariableType() + " and " + var2.GetVariableType());
+        String error_str = String.format(
+            "operation add is not possible on %s(%s) and %s(%s)",
+            var1.GetVariableName(),
+            var1.GetVariableType(),
+            var2.GetVariableName(), 
+            var2.GetVariableType());
+        throw new OperationError(error_str);
     }
 }

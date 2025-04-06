@@ -29,13 +29,6 @@ public class BooleanVariable implements Variable {
     }
 
     @Override
-    public boolean IsConvertableTo(Variable var) {
-        if (var == null)
-            return false;
-        return var.GetVariableType() == VariableType.Boolean;
-    }
-
-    @Override
     public boolean IsSameAs(Variable var) {
         return var != null && var.GetVariableType() == VariableType.Boolean;
     }

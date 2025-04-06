@@ -29,14 +29,6 @@ public class IntVariable implements Variable {
     }
 
     @Override
-    public boolean IsConvertableTo(Variable var) {
-        if (var == null)
-            return false;
-        VariableType target = var.GetVariableType();
-        return target == VariableType.Int || target == VariableType.Double;
-    }
-
-    @Override
     public boolean IsSameAs(Variable var) {
         return var != null && var.GetVariableType() == VariableType.Int;
     }

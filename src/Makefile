@@ -23,16 +23,17 @@ test : absyn \
 	jlc/lib/javalette/sym.class \
 	jlc/lib/javalette/Test.class \
 	jlc/main/Operations/Add.class \
+	jlc/main/Operations/AddType.class \
 	jlc/main/Operations/And.class \
 	jlc/main/Operations/Ass.class \
 	jlc/main/Variables/BooleanVariable.class \
 	jlc/main/Ctx.class \
-	jlc/main/Operations/Div.class \
 	jlc/main/Variables/DoubleVariable.class \
 	jlc/main/Function.class \
 	jlc/main/Variables/IntVariable.class \
-	jlc/main/Interpret.class \
+	jlc/main/Variables/StringVariable.class \
 	jlc/main/Operations/Mul.class \
+	jlc/main/Operations/MulType.class \
 	jlc/main/FnVisit.class \
 	jlc/main/Operations/Neg.class \
 	jlc/main/Operations/Not.class \
@@ -43,7 +44,9 @@ test : absyn \
 	jlc/main/Variables/VariableType.java \
 	jlc/main/Variables/VoidVariable.class \
 	jlc/main/TypeCheckerVisit.class \
-	jlc/main/Operations/Rel.class
+	jlc/main/Operations/Rel.class \
+	jlc/main/Operations/RelType.class \
+	jlc/main/Main.class
 
 .PHONY : absyn
 
@@ -70,6 +73,7 @@ jlc/lib/javalette/PrettyPrinter.class : jlc/lib/javalette/PrettyPrinter.java
 
 clean :
 	rm -f jlc/lib/javalette/Absyn/*.class jlc/lib/javalette/*.class
+	rm -rf ../bin
 
 distclean : vclean
 
