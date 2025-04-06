@@ -13,7 +13,6 @@ import jlc.main.Operations.Add;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.And;
 import jlc.main.Operations.Ass;
-import jlc.main.Operations.Div;
 import jlc.main.Operations.Mul;
 import jlc.main.Operations.MulType;
 import jlc.main.Operations.Neg;

@@ -8,7 +8,7 @@ PARSER=${JAVA} ${JAVA_FLAGS} java_cup.Main
 PARSER_FLAGS=-nopositions -expect 100
 LEXER=${JAVA} ${JAVA_FLAGS} JLex.Main
 LEXER_FLAGS=
-all : test
+all : test run
 
 test : absyn \
 	jlc/lib/javalette/Yylex.class \
@@ -47,6 +47,11 @@ test : absyn \
 	jlc/main/Operations/Rel.class \
 	jlc/main/Operations/RelType.class \
 	jlc/main/Main.class
+
+RESOLVED_BIN_PATH := $(shell pwd)/../bin
+
+run:
+	@sed -i "4s|.*|export CLASSPATH=$(RESOLVED_BIN_PATH):\$$CLASSPATH|" ../jlc
 
 .PHONY : absyn
 
