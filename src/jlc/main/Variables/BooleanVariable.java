@@ -2,9 +2,15 @@ package jlc.main.Variables;
 
 public class BooleanVariable implements Variable {
     private String name;
+    private VariableKind variableKind;
 
     public BooleanVariable(String name) {
         this.name = name;
+    }
+
+    public BooleanVariable(String name, VariableKind variableKind) {
+        this.name = name;
+        this.variableKind = variableKind;
     }
 
     @Override
@@ -28,6 +34,17 @@ public class BooleanVariable implements Variable {
             throw new IllegalArgumentException("BooleanVariable can only have type Boolean");
     }
 
+    
+    @Override
+    public VariableKind GetVariableKind() {
+        return this.variableKind;
+    }
+
+    @Override
+    public void SetVariableKind(VariableKind type) {
+        this.variableKind = type;
+    }
+
     @Override
     public boolean IsSameAs(Variable var) {
         return var != null && var.GetVariableType() == VariableType.Boolean;
@@ -35,6 +52,6 @@ public class BooleanVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new BooleanVariable("last");
+        return new BooleanVariable("last", this.variableKind);
     }
 }

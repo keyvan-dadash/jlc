@@ -2,9 +2,15 @@ package jlc.main.Variables;
 
 public class IntVariable implements Variable {
     private String name;
+    private VariableKind variableKind;
 
     public IntVariable(String name) {
         this.name = name;
+    }
+
+    public IntVariable(String name, VariableKind variableKind) {
+        this.name = name;
+        this.variableKind = variableKind;
     }
 
     @Override
@@ -29,12 +35,22 @@ public class IntVariable implements Variable {
     }
 
     @Override
+    public VariableKind GetVariableKind() {
+        return this.variableKind;
+    }
+
+    @Override
+    public void SetVariableKind(VariableKind type) {
+        this.variableKind = type;
+    }
+
+    @Override
     public boolean IsSameAs(Variable var) {
         return var != null && var.GetVariableType() == VariableType.Int;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new IntVariable("last");
+        return new IntVariable("last", variableKind);
     }
 }
