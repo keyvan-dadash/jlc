@@ -6,6 +6,8 @@ import java.lang.ProcessBuilder.Redirect.Type;
 import jlc.lib.javalette.*;
 
 public class TypeChecker {
+  private Ctx ctx;
+  jlc.lib.javalette.Absyn.Prog parse_tree;
 
   TypeChecker() {
         
@@ -36,5 +38,16 @@ public class TypeChecker {
 
     // Run the visitor on the parse tree.
     parse_tree.accept(visitor_type, null);
+
+    ctx = tmp_type.ctx;
+    this.parse_tree = parse_tree;
+  }
+
+  public Ctx GetCtx() {
+    return ctx;
+  }
+
+  public jlc.lib.javalette.Absyn.Prog GetTree() {
+    return parse_tree;
   }
 }

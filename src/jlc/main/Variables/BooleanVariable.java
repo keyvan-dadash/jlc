@@ -52,6 +52,6 @@ public class BooleanVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new BooleanVariable("last", this.variableKind);
+        return new BooleanVariable("last", VariableKind.Unkown);
     }
 }

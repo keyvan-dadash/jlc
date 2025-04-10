@@ -41,12 +41,29 @@ test : absyn \
 	jlc/main/Operations/OperationError.class \
 	jlc/main/Operations/Or.class \
 	jlc/main/Variables/Variable.class \
-	jlc/main/Variables/VariableType.java \
+	jlc/main/Variables/VariableType.class \
 	jlc/main/Variables/VoidVariable.class \
 	jlc/main/TypeCheckerVisit.class \
 	jlc/main/Operations/Rel.class \
 	jlc/main/Operations/RelType.class \
-	jlc/main/Main.class
+	jlc/main/Main.class \
+	jlc/main/Instructions/LLVM/LLVMAddInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMAllocaInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMAndInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMFuncCallIntruction.class \
+	jlc/main/Instructions/LLVM/LLVMFuncDefenitionEnd.class \
+	jlc/main/Instructions/LLVM/LLVMFuncDefenition.class \
+	jlc/main/Instructions/LLVM/LLVMJmpInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMLabelInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMLoadInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMMulInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMOrInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMRelInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMReturnInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMStoreInstruction.class \
+	jlc/main/LLVMCodeGenCtx.class \
+	jlc/main/LLVMCodeGeneratorVisit.class \
+	jlc/main/Instructions/LLVM/Utils.class
 
 RESOLVED_BIN_PATH := $(shell pwd)/../bin
 

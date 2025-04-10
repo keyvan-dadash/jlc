@@ -51,6 +51,6 @@ public class IntVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new IntVariable("last", variableKind);
+        return new IntVariable("last", VariableKind.Unkown);
     }
 }

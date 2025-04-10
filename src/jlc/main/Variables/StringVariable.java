@@ -51,6 +51,6 @@ public class StringVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new StringVariable("last", variableKind);
+        return new StringVariable("last", VariableKind.Unkown);
     }
 }

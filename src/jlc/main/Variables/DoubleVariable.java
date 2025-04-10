@@ -51,6 +51,6 @@ public class DoubleVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new DoubleVariable("last", variableKind);
+        return new DoubleVariable("last", VariableKind.Unkown);
     }
 }

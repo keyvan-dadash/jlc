@@ -51,6 +51,6 @@ public class VoidVariable implements Variable {
 
     @Override
     public Variable GetNewVariableSameType() {
-        return new VoidVariable("last", variableKind);
+        return new VoidVariable("last", VariableKind.Unkown);
     }
 }

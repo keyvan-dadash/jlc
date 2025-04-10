@@ -5,9 +5,11 @@ package jlc.main.Variables;
 // This is important for knowing whether we have to allocate a variable,
 // or we can use register in our backend.
 public enum VariableKind {
+    Unkown,
     FuncParam,
     FuncRet,
     LocalVariable,
     GlobalVariable,
-    TempVariable
+    TempVariable,
+    ConstantVariable
 }
