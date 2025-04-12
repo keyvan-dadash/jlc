@@ -1,6 +1,14 @@
 # Compiled class file
 *.class
 
+lib/*bc
+
+final_executable
+
+src/test.jl
+
+output.ll
+
 bin/
 
 src/javalette/*.class
