@@ -61,6 +61,10 @@ test : absyn \
 	jlc/main/Instructions/LLVM/LLVMRelInstruction.class \
 	jlc/main/Instructions/LLVM/LLVMReturnInstruction.class \
 	jlc/main/Instructions/LLVM/LLVMStoreInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMNegInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMNotInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMGlobalStringInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMLoadGlobalStringInstruction.class \
 	jlc/main/LLVMCodeGenCtx.class \
 	jlc/main/LLVMCodeGeneratorVisit.class \
 	jlc/main/Instructions/LLVM/Utils.class

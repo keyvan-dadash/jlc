@@ -12,23 +12,30 @@ import jlc.main.Instructions.LLVM.LLVMAndInstruction;
 import jlc.main.Instructions.LLVM.LLVMFuncCallIntruction;
 import jlc.main.Instructions.LLVM.LLVMFuncDefenition;
 import jlc.main.Instructions.LLVM.LLVMFuncDefenitionEnd;
+import jlc.main.Instructions.LLVM.LLVMGlobalStringInstruction;
 import jlc.main.Instructions.LLVM.LLVMJmpInstruction;
 import jlc.main.Instructions.LLVM.LLVMLabelInstruction;
+import jlc.main.Instructions.LLVM.LLVMLoadGlobalStringInstruction;
 import jlc.main.Instructions.LLVM.LLVMLoadInstruction;
 import jlc.main.Instructions.LLVM.LLVMMulInstruction;
+import jlc.main.Instructions.LLVM.LLVMNegInstruction;
+import jlc.main.Instructions.LLVM.LLVMNotInstruction;
 import jlc.main.Instructions.LLVM.LLVMOrInstruction;
 import jlc.main.Instructions.LLVM.LLVMRelInstruction;
 import jlc.main.Instructions.LLVM.LLVMReturnInstruction;
 import jlc.main.Instructions.LLVM.LLVMStoreInstruction;
 import jlc.main.Instructions.LLVM.LLVMUnreachableInstruction;
+import jlc.main.Instructions.LLVM.Utils;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.MulType;
 import jlc.main.Operations.RelType;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.IntVariable;
+import jlc.main.Variables.StringVariable;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableKind;
+import jlc.main.Variables.VariableType;
 import jlc.main.Variables.VoidVariable;
 
 public class LLVMCodeGeneratorVisit {
@@ -42,12 +49,15 @@ public class LLVMCodeGeneratorVisit {
           ctx = this.ctx;
 
           for (jlc.lib.javalette.Absyn.TopDef x: p.listtopdef_) {
-            LLVMCodeGenCtx fnCtx = LLVMCodeGenCtx.GetSubCtxWithoutVariables(ctx);
+            LLVMCodeGenCtx fnCtx = LLVMCodeGenCtx.GetSubCtxWithoutVariablesAndParent(ctx);
             fnCtx.ResetCounters();
             fnCtx = x.accept(new TopDefVisitor(), fnCtx);
 
             // Copy instruction that has been generated for the function
             ctx.CopyInstructionsFromCtx(fnCtx);
+
+            // Also we should copy the global variable counter
+            ctx.gloabl_variable_counter = fnCtx.gloabl_variable_counter;
           }
 
           return ctx;
@@ -95,7 +105,11 @@ public class LLVMCodeGeneratorVisit {
           ctx.instruction_of_ctx.add(llvmFuncDefenition);
 
           for (int i = 0; i < args_to_allocate.size(); i++) {
-            // First we should allocate the arg
+            // First, we should rename the argument
+            Variable renamedArg = ctx.GetRenamedVariable(args_to_allocate.get(i));
+            args_to_allocate.set(i, renamedArg);
+
+            // Second, we should allocate the arg
             LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(
                 args_to_allocate.get(i),
                 args_to_allocate.get(i).GetVariableType());
@@ -108,19 +122,22 @@ public class LLVMCodeGeneratorVisit {
             ctx.instruction_of_ctx.add(llvmStoreInstruction);
 
             // we can put the arg in side the loaded variable since it is a register
-            ctx.loaded_variables.put(args_to_allocate.get(i).GetVariableName(), args.get(i));
+            ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), args.get(i));
 
             // Also we should put them in ctx vairables
-            ctx.ctx_variables.put(args_to_allocate.get(i).GetVariableName(), args_to_allocate.get(i));
+            ctx.AddToCtxVariable(args_to_allocate.get(i));
           }
 
           ctx = p.blk_.accept(new BlkVisitor(), ctx);
 
-          // Add an unreach before function end so that we dont have to handle
-          // if and elses that return and our branching will get messed up.
-          LLVMUnreachableInstruction llvmUnreachableInstruction = new LLVMUnreachableInstruction();
-          llvmUnreachableInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmUnreachableInstruction);
+          // If this is a void function then the return statement might not be written
+          // so we need to check and add return statement instruction to be able to compile.
+          if (!ctx.is_ctx_return) {
+            LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction();
+            llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
+            ctx.instruction_of_ctx.add(llvmReturnInstruction);
+            ctx.is_ctx_return = true;
+          }
 
           LLVMFuncDefenitionEnd llvmFuncDefenitionEnd = new LLVMFuncDefenitionEnd();
           llvmFuncDefenitionEnd.AddNumOfSpaceForPrefix(0);
@@ -159,8 +176,11 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.BStmt p, LLVMCodeGenCtx ctx) {
-          // TODO: new context?
-          p.blk_.accept(new BlkVisitor(), ctx);
+          LLVMCodeGenCtx blkCtx = LLVMCodeGenCtx.GetSubCtxWithoutVariables(ctx);
+          p.blk_.accept(new BlkVisitor(), blkCtx);
+          ctx.CopyInstructionsFromCtx(blkCtx);
+          ctx.CopyCountersFromCtx(blkCtx);
+          ctx.is_ctx_return = blkCtx.is_ctx_return;
           return ctx;
         }
 
@@ -180,7 +200,7 @@ public class LLVMCodeGeneratorVisit {
             typeVariable = ctx.GetLastVariable();
 
             // Put variables inside ctx
-            ctx.ctx_variables.put(typeVariable.GetVariableName(), typeVariable);
+            ctx.AddToCtxVariable(typeVariable);
 
             ctx.ClearLastVariable();
             ctx.SetLastVariable(typeVariable.GetNewVariableSameType());
@@ -198,14 +218,14 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
 
           // We should store resultVariable to the local variable
-          Variable localVariable = ctx.ctx_variables.get(p.ident_);
+          Variable localVariable = ctx.GetVariableFromCtx(p.ident_);
           LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(resultVariable, localVariable);
           llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmStoreInstruction);
 
           // Now, we should invalidate all the previous load instructions that loaded this local variable
           // because now it changed so that we load it again if needed.
-          ctx.loaded_variables.remove(p.ident_);
+          ctx.UnloadVariable(p.ident_);
           return ctx;
         }
 
@@ -214,8 +234,8 @@ public class LLVMCodeGeneratorVisit {
           one.SetVariableKind(VariableKind.ConstantVariable);
 
           // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.loaded_variables.get(p.ident_);
-          Variable localVar = ctx.ctx_variables.get(p.ident_);;
+          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
+          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
           if (isTmpExist == null) {
             // We need to load the variable
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
@@ -224,7 +244,7 @@ public class LLVMCodeGeneratorVisit {
             ctx.instruction_of_ctx.add(llvmLoadInstruction);
 
             // We store it as a vriable that has already loaded a local vriable
-            ctx.loaded_variables.put(localVar.GetVariableName(), isTmpExist);
+            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
           }
 
           // We have the isTmpExist as the temp register which loaded a local vriable
@@ -239,10 +259,10 @@ public class LLVMCodeGeneratorVisit {
           ctx.instruction_of_ctx.add(llvmStoreInstruction);
 
           // Now remove old loaded tmp vairable
-          ctx.loaded_variables.remove(localVar.GetVariableName());
+          ctx.UnloadVariable(localVar.GetVariableName());
 
           // Store the new loaded variable
-          ctx.loaded_variables.put(localVar.GetVariableName(), newTmp);
+          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
@@ -252,8 +272,8 @@ public class LLVMCodeGeneratorVisit {
           one.SetVariableKind(VariableKind.ConstantVariable);
 
           // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.loaded_variables.get(p.ident_);
-          Variable localVar = ctx.ctx_variables.get(p.ident_);;
+          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
+          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
           if (isTmpExist == null) {
             // We need to load the variable
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
@@ -262,7 +282,7 @@ public class LLVMCodeGeneratorVisit {
             ctx.instruction_of_ctx.add(llvmLoadInstruction);
 
             // We store it as a vriable that has already loaded a local vriable
-            ctx.loaded_variables.put(localVar.GetVariableName(), isTmpExist);
+            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
           }
 
           // We have the isTmpExist as the temp register which loaded a local vriable
@@ -277,10 +297,10 @@ public class LLVMCodeGeneratorVisit {
           ctx.instruction_of_ctx.add(llvmStoreInstruction);
 
           // Now remove old loaded tmp vairable
-          ctx.loaded_variables.remove(localVar.GetVariableName());
+          ctx.UnloadVariable(localVar.GetVariableName());
 
           // Store the new loaded variable
-          ctx.loaded_variables.put(localVar.GetVariableName(), newTmp);
+          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
@@ -293,6 +313,7 @@ public class LLVMCodeGeneratorVisit {
           LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction(result);
           llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmReturnInstruction);
+          ctx.is_ctx_return = true;
           return ctx;
         }
 
@@ -300,6 +321,7 @@ public class LLVMCodeGeneratorVisit {
           LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction();
           llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmReturnInstruction);
+          ctx.is_ctx_return = true;
           return ctx;
         }
 
@@ -324,12 +346,17 @@ public class LLVMCodeGeneratorVisit {
           llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
           ctx.instruction_of_ctx.add(llvmLabelInstruction);
 
-          p.stmt_.accept(new StmtVisitor(), ctx);
+          LLVMCodeGenCtx ifCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
+          p.stmt_.accept(new StmtVisitor(), ifCtx);
+          ctx.CopyInstructionsFromCtx(ifCtx);
+          ctx.CopyCountersFromCtx(ifCtx);
 
-          // Now, we should add jump to the if end inside the statment
-          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
-          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          if (!ifCtx.is_ctx_return) {
+            // Now, we should add jump to the if end inside the statment
+            LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
+            llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
+            ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          }
 
           // Now, we add label instruction end after adding statements instructions
           LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(ifEnd);
@@ -360,29 +387,43 @@ public class LLVMCodeGeneratorVisit {
           llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
           ctx.instruction_of_ctx.add(llvmLabelInstruction);
 
-          p.stmt_1.accept(new StmtVisitor(), ctx);
+          LLVMCodeGenCtx ifCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
+          p.stmt_1.accept(new StmtVisitor(), ifCtx);
+          ctx.CopyInstructionsFromCtx(ifCtx);
+          ctx.CopyCountersFromCtx(ifCtx);
 
-          // Now, we should add jump to the if end inside if the statment
-          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
-          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          if (!ifCtx.is_ctx_return) {
+            // Now, we should add jump to the if end inside if the statment
+            LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
+            llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
+            ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          }
 
           // Now, we add else label instruction before adding else statements instructions
           LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(elseStLabel);
           llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
           ctx.instruction_of_ctx.add(llvmLabelInstruction1);
 
-          p.stmt_2.accept(new StmtVisitor(), ctx);
+          LLVMCodeGenCtx elseCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
+          p.stmt_2.accept(new StmtVisitor(), elseCtx);
+          ctx.CopyInstructionsFromCtx(elseCtx);
+          ctx.CopyCountersFromCtx(elseCtx);
 
-          // Now, we should add jump to the if end inside the statment
-          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(ifEnd);
-          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+          if (!elseCtx.is_ctx_return) {
+            // Now, we should add jump to the if end inside the statment
+            LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(ifEnd);
+            llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
+            ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+          }
 
-          // Now, we add label instruction end after adding statements instructions
-          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(ifEnd);
-          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+          if (!ifCtx.is_ctx_return || !elseCtx.is_ctx_return) {
+            // Now, we add label instruction end after adding statements instructions
+            LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(ifEnd);
+            llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
+            ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+          }
+
+          ctx.is_ctx_return = ifCtx.is_ctx_return && elseCtx.is_ctx_return;
 
           return ctx;
         }
@@ -452,10 +493,18 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
 
+          // Lets renamed the variable
+          var = ctx.GetRenamedVariable(var);
+
           // Now we need add alloca instruction
           LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(var, var.GetVariableType());
           llvmAllocaInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmAllocaInstruction);
+
+          // Now, we should intitlize the variable by ourself
+          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(Utils.GetDefaultValueOfVariableType(var.GetVariableType()), var);
+          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmStoreInstruction);
 
           // Set so that future declaration in the same token get variable of same type
           ctx.SetLastVariable(var);
@@ -468,6 +517,9 @@ public class LLVMCodeGeneratorVisit {
           Variable var = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
+
+          // Lets renamed the variable
+          var = ctx.GetRenamedVariable(var);
 
           // Now we need add alloca instruction
           LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(var, var.GetVariableType());
@@ -526,17 +578,17 @@ public class LLVMCodeGeneratorVisit {
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EVar p, LLVMCodeGenCtx ctx) {
           // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.loaded_variables.get(p.ident_);
+          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
           if (isTmpExist == null) {
             // We need to load the variable
-            Variable localVar = ctx.ctx_variables.get(p.ident_);
+            Variable localVar = ctx.GetVariableFromCtx(p.ident_);
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
             LLVMLoadInstruction llvmLoadInstruction = new LLVMLoadInstruction(localVar, isTmpExist);
             llvmLoadInstruction.AddNumOfSpaceForPrefix(4);
             ctx.instruction_of_ctx.add(llvmLoadInstruction);
 
             // We store it as a vriable that has already loaded a local vriable
-            ctx.loaded_variables.put(localVar.GetVariableName(), isTmpExist);
+            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
           }
 
           // We have the isTmpExist as the temp register which loaded a local vriable
@@ -559,14 +611,14 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ELitTrue p, LLVMCodeGenCtx ctx) {
-          Variable var = new IntVariable("1");
+          Variable var = new BooleanVariable("1");
           var.SetVariableKind(VariableKind.ConstantVariable);
           ctx.SetLastVariable(var);
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ELitFalse p, LLVMCodeGenCtx ctx) {
-          Variable var = new IntVariable("0");
+          Variable var = new BooleanVariable("0");
           var.SetVariableKind(VariableKind.ConstantVariable);
           ctx.SetLastVariable(var);
           return ctx;
@@ -585,6 +637,21 @@ public class LLVMCodeGeneratorVisit {
           Function fn = ctx.functions.get(p.ident_);
           // Lets create a tmp variable same type of the return value of function
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(fn.return_var);
+
+          // Here we should add new temp variables in case we are trying to pass string
+          for (int i = 0; i < args.size(); i++) {
+            if (args.get(i).GetVariableType() == VariableType.String) {
+                // We need to cast and generate new temp variable for it.
+                Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(args.get(i));
+                String strContent = ctx.global_strings.get(args.get(i).GetVariableName());
+                LLVMLoadGlobalStringInstruction llvmLoadGlobalStringInstruction = 
+                        new LLVMLoadGlobalStringInstruction(tempVariable, args.get(i).GetVariableName(), strContent);
+                llvmLoadGlobalStringInstruction.AddNumOfSpaceForPrefix(4);
+                ctx.instruction_of_ctx.add(llvmLoadGlobalStringInstruction);
+                args.set(i, tempVariable);
+            }
+          }
+
           LLVMFuncCallIntruction llvmFuncCallIntruction = new LLVMFuncCallIntruction(fn, tmp, args);
           llvmFuncCallIntruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmFuncCallIntruction);
@@ -596,19 +663,49 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EString p, LLVMCodeGenCtx ctx) {
-          // TODO: we have to do this
+          // First, we should get a global variable
+          Variable gVariable = ctx.GetNewGlobalVairableWithTheSameTypeOf(new StringVariable(""));
+          gVariable.SetVariableKind(VariableKind.GlobalVariable);
+
+          // Lets add global instruction
+          LLVMGlobalStringInstruction llvmGlobalStringInstruction = new LLVMGlobalStringInstruction(gVariable.GetVariableName(), p.string_);
+          llvmGlobalStringInstruction.AddNumOfSpaceForPrefix(0);
+          ctx.global_instructions.add(llvmGlobalStringInstruction);
+
+          ctx.global_strings.put(gVariable.GetVariableName(), p.string_);
+          ctx.SetLastVariable(gVariable);
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Neg p, LLVMCodeGenCtx ctx) {
-          // TODO: we have to do this
           p.expr_.accept(new ExprVisitor(), ctx);
+          Variable result = ctx.GetLastVariable();
+          ctx.ClearLastVariable();
+
+          // Lets get new temp variable
+          Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(result);
+          LLVMNegInstruction llvmNegInstruction = new LLVMNegInstruction(result, tempVariable);
+          llvmNegInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmNegInstruction);
+
+          // Set the result now
+          ctx.SetLastVariable(tempVariable);
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Not p, LLVMCodeGenCtx ctx) {
-          // TODO: we have to do this
           p.expr_.accept(new ExprVisitor(), ctx);
+          Variable result = ctx.GetLastVariable();
+          ctx.ClearLastVariable();
+
+          // Lets get new temp variable
+          Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(result);
+          LLVMNotInstruction llvmNotInstruction = new LLVMNotInstruction(result, tempVariable);
+          llvmNotInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmNotInstruction);
+
+          // Set the result now
+          ctx.SetLastVariable(tempVariable);
           return ctx;
         }
 
@@ -682,7 +779,8 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
-          Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
+          // result of rel operation is always boolean
+          Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
           llvmRelInstruction.AddNumOfSpaceForPrefix(4);
           llvmRelInstruction.setVariables(var1, var2, tmp);
           ctx.instruction_of_ctx.add(llvmRelInstruction);

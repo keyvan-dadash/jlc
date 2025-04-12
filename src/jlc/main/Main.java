@@ -11,7 +11,7 @@ public class Main {
                 typeChecker.GetCtx(),
                 typeChecker.GetTree(),
                 "output.ll");
-            codeGenerator.GenerateCode();
+            codeGenerator.GenerateCode(true);
         } catch(Exception e) {
             if (args.length > 0 && args[0].equals(new String("v"))) {
                 System.err.println(String.format("failed to compile the given input:\n%s", e.getMessage()));

@@ -17,7 +17,7 @@ public class CodeGenerator {
         this.parse_tree = parse_tree;
     }
 
-    public void GenerateCode() {
+    public void GenerateCode(boolean shouldWriteToOut) {
         LLVMCodeGenCtx llvmCodeGenCtx = new LLVMCodeGenCtx();
         llvmCodeGenCtx.functions = ctx.functions;
 
@@ -50,9 +50,12 @@ public class CodeGenerator {
         // Write the generated code to the output file.
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilename))) {
             writer.write(code.toString());
-            System.out.println("Code successfully generated to " + outputFilename);
         } catch (IOException e) {
             System.err.println("Error writing to file " + outputFilename + ": " + e.getMessage());
+        }
+
+        if (shouldWriteToOut) {
+            System.out.println(code.toString());
         }
     }
 

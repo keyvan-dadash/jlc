@@ -29,9 +29,10 @@ public class LLVMOrInstruction implements Instruction {
 
     @Override
     public String GenerateInstruction() {
-        return String.format("%s%s = or i32 %s, %s",
+        return String.format("%s%s = or %s %s, %s",
                 Utils.GetNumOfSpace(this.numOfSpace),
                 Utils.VariableToLLVMVariable(result),
+                Utils.VariableTypeToLLVMVariableType(result.GetVariableType()),
                 Utils.VariableToLLVMVariable(var1),
                 Utils.VariableToLLVMVariable(var2));
     }

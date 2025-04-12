@@ -59,6 +59,7 @@ public class LLVMFuncCallIntruction implements Instruction {
             if (index != 0)
                 argsStr = argsStr + ", ";
             argsStr = argsStr + Utils.VariableTypeToLLVMVariableType(arg.GetVariableType()) + " " + Utils.VariableToLLVMVariable(arg);
+            index++;
         }
 
         return argsStr;

@@ -29,9 +29,10 @@ public class LLVMAndInstruction implements Instruction {
 
     @Override
     public String GenerateInstruction() {
-        return String.format("%s%s = and i32 %s, %s",
+        return String.format("%s%s = and %s %s, %s",
                 Utils.GetNumOfSpace(this.numOfSpace),
                 Utils.VariableToLLVMVariable(result),
+                Utils.VariableTypeToLLVMVariableType(result.GetVariableType()),
                 Utils.VariableToLLVMVariable(var1),
                 Utils.VariableToLLVMVariable(var2));
     }

@@ -1,5 +1,7 @@
 package jlc.main.Instructions.LLVM;
 
+import jlc.main.Variables.DoubleVariable;
+import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableKind;
 import jlc.main.Variables.VariableType;
@@ -8,6 +10,10 @@ public class Utils {
     public static String VariableToLLVMVariable(Variable var) {
         if (var.GetVariableKind() == VariableKind.ConstantVariable) {
             return var.GetVariableName();
+        }
+
+        if (var.GetVariableKind() == VariableKind.GlobalVariable) {
+            return String.format("@%s", var.GetVariableName());
         }
         
         return String.format("%%%s", var.GetVariableName());
@@ -24,8 +30,34 @@ public class Utils {
             case Double: {
                 return "double";
             }
+            case String: {
+                return "i8*";
+            }
             default: {
-                throw new RuntimeException("other variable types cannot be converted to llvm variable type");
+                throw new RuntimeException(String.format("other variable types cannot be converted to llvm variable type. %s", varType));
+            }
+        }
+    }
+
+    public static Variable GetDefaultValueOfVariableType(VariableType varType) {
+        switch (varType) {
+            case Int: {
+                Variable var = new IntVariable("0");
+                var.SetVariableKind(VariableKind.ConstantVariable);
+                return var;
+            }
+            case Boolean: {
+                Variable var = new IntVariable("0");
+                var.SetVariableKind(VariableKind.ConstantVariable);
+                return var;
+            }
+            case Double: {
+                Variable var = new DoubleVariable("0.0");
+                var.SetVariableKind(VariableKind.ConstantVariable);
+                return var;
+            }
+            default: {
+                throw new RuntimeException("initial value for this variable type does not especified in the language");
             }
         }
     }
