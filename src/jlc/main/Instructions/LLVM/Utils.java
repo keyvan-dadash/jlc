@@ -1,5 +1,6 @@
 package jlc.main.Instructions.LLVM;
 
+import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.Variable;
@@ -69,5 +70,11 @@ public class Utils {
 
         String format = "%" + num + "s";
         return String.format(format, "");
+    }
+
+    public static Variable GetOne() {
+        Variable one = new BooleanVariable("1");
+        one.SetVariableKind(VariableKind.ConstantVariable);
+        return one;
     }
 }

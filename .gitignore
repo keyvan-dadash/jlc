@@ -5,7 +5,7 @@ lib/*bc
 
 final_executable
 
-src/test.jl
+src/*.jl
 
 output.ll
 

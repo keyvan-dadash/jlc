@@ -1,31 +1,40 @@
-int main() {
-  printString("&&");
-  printBool(test(-1) && test(0));
-  printBool(test(-2) && test(1));
-  printBool(test(3) && test(-5));
-  printBool(test(234234) && test(21321));
-  printString("||");
-  printBool(test(-1) || test(0));
-  printBool(test(-2) || test(1));
-  printBool(test(3) || test(-5));
-  printBool(test(234234) || test(21321));
-  printString("!");
-  printBool(true);
-  printBool(false);
+/* Test boolean operators */
+
+int main () {
+  int x = 4;
+  if (3 <= x && 4 != 2 && true) {
+    printBool(true);
+  } else {
+    printString("apa");
+  }
+
+  printBool(true == true || dontCallMe(1));
+  printBool(4.0 < -50.0 && dontCallMe(2));
+
+  printBool(4 == x && true == !false && true);
+
+  printBool(implies(false,false));
+  printBool(implies(false,true));
+  printBool(implies(true,false));
+  printBool(implies(true,true));
   return 0 ;
 
 }
 
+boolean dontCallMe(int x) {
+  printInt(x);
+  return true;
+}
+
 void printBool(boolean b) {
-  if (!b) {
-    printString("false");
-  } else {
+  if (b) {
     printString("true");
+  } else {
+    printString("false");
  }
  return;
 }
 
-boolean test(int i) {
-  printInt(i);
-  return i > 0;
+boolean implies(boolean x, boolean y) {
+  return !x || x == y;
 }

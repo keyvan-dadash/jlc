@@ -21,8 +21,10 @@ import jlc.main.Instructions.LLVM.LLVMMulInstruction;
 import jlc.main.Instructions.LLVM.LLVMNegInstruction;
 import jlc.main.Instructions.LLVM.LLVMNotInstruction;
 import jlc.main.Instructions.LLVM.LLVMOrInstruction;
+import jlc.main.Instructions.LLVM.LLVMPhiInstruction;
 import jlc.main.Instructions.LLVM.LLVMRelInstruction;
 import jlc.main.Instructions.LLVM.LLVMReturnInstruction;
+import jlc.main.Instructions.LLVM.LLVMSelectInstruction;
 import jlc.main.Instructions.LLVM.LLVMStoreInstruction;
 import jlc.main.Instructions.LLVM.LLVMUnreachableInstruction;
 import jlc.main.Instructions.LLVM.Utils;
@@ -792,42 +794,136 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EAnd p, LLVMCodeGenCtx ctx) {
+          ctx.last_label = "";
+
+          // Before evaluating first part of and we should jump to a stupid label so that phi 
+          // instruction can decide later based on it
+          String andFirstPartTrue = ctx.GetNewLabelWithPrefix("and.first.true");
+          String andFirstPartFalse = ctx.GetNewLabelWithPrefix("and.first.false");
+          String andEnd = ctx.GetNewLabelWithPrefix("and.end");
+
+          // Now we evaluate the first part of and
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
           ctx.ClearLastVariable();
+
+          // Now lets see if the and is true so we can go to the second part
+          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(var1, andFirstPartTrue, andFirstPartFalse);
+          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+
+          // Add the first part label
+          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(andFirstPartFalse);
+          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+
+          // Now lets see if the and is true so we can go to the second part
+          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(andEnd);
+          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+
+          // Add the second part label
+          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(andFirstPartTrue);
+          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
-          // Now we need to add 'and' instruction to a temp vairable
+          // Lets write the and instruction of both var1 and var2
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
           LLVMAndInstruction llvmAndInstruction = new LLVMAndInstruction(var1, var2, tmp);
           llvmAndInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmAndInstruction);
 
-          // We set the tmp so the rest of the tree can get the value
-          ctx.SetLastVariable(tmp);
+          // Now jump to the end
+          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(andEnd);
+          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+
+          // Lets add the end label
+          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(andEnd);
+          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+
+          // Now lets decide the final result based on the branch we took using phi instruction
+          Variable tmp1 = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
+          LLVMPhiInstruction llvmPhiInstruction = new LLVMPhiInstruction(tmp1);
+          llvmPhiInstruction.addIncoming(tmp, ctx.last_label == "" ? andFirstPartTrue : ctx.last_label);
+          llvmPhiInstruction.addIncoming(var1, andFirstPartFalse);
+          llvmPhiInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmPhiInstruction);
+
+          ctx.SetLastVariable(tmp1);
+          ctx.last_label = andEnd;
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EOr p, LLVMCodeGenCtx ctx) {
+          ctx.last_label = "";
+
+          // Before evaluating first part of or we should jump to a stupid label so that phi 
+          // instruction can decide later based on it
+          String orFirstPartTrue = ctx.GetNewLabelWithPrefix("or.first.true");
+          String orFirstPartFalse = ctx.GetNewLabelWithPrefix("or.first.false");
+          String orEnd = ctx.GetNewLabelWithPrefix("or.end");
+
+          // Now we evaluate the first part of or
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
           ctx.ClearLastVariable();
+
+          // Now lets see if the or is false so we can go to the second part
+          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(var1, orFirstPartTrue, orFirstPartFalse);
+          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+
+          // Add the first part label
+          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(orFirstPartTrue);
+          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+
+          // Now lets see if the or is true so we can go to the second part
+          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(orEnd);
+          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+
+          // Add the second part label
+          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(orFirstPartFalse);
+          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
-          // Now we need to add 'or' instruction to a temp vairable
+          // Lets write the or instruction of both var1 and var2
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
           LLVMOrInstruction llvmOrInstruction = new LLVMOrInstruction(var1, var2, tmp);
           llvmOrInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmOrInstruction);
 
-          // We set the tmp so the rest of the tree can get the value
-          ctx.SetLastVariable(tmp);
+          // Now jump to the end
+          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(orEnd);
+          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+
+          // Lets add the end label
+          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(orEnd);
+          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
+          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+
+          // Now lets decide the final result based on the branch we took using phi instruction
+          Variable tmp1 = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
+          LLVMPhiInstruction llvmPhiInstruction = new LLVMPhiInstruction(tmp1);
+          llvmPhiInstruction.addIncoming(tmp, ctx.last_label == "" ? orFirstPartFalse : ctx.last_label);
+          llvmPhiInstruction.addIncoming(var1, orFirstPartTrue);
+          llvmPhiInstruction.AddNumOfSpaceForPrefix(4);
+          ctx.instruction_of_ctx.add(llvmPhiInstruction);
+
+          ctx.SetLastVariable(tmp1);
+          ctx.last_label = orEnd;
           return ctx;
         }
       }

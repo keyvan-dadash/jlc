@@ -62,6 +62,8 @@ public class LLVMCodeGenCtx {
     // This is important in the code generation of if and else.
     public Boolean is_ctx_return;
 
+    public String last_label;
+
     LLVMCodeGenCtx() {
         temp_variable_counter = 0;
         label_counter = 0;
@@ -76,6 +78,7 @@ public class LLVMCodeGenCtx {
         last_variable = null;
         parent = null;
         is_ctx_return = false;
+        last_label = "";
     }
 
     // GetNewTempVairableWithTheSameTypeOf returns a new unique temporary variable.
