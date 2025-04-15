@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import jlc.lib.javalette.*;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.VoidVariable;

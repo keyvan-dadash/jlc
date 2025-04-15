@@ -2,7 +2,6 @@ package jlc.main;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import jlc.main.Instructions.Instruction;
@@ -24,9 +23,7 @@ import jlc.main.Instructions.LLVM.LLVMOrInstruction;
 import jlc.main.Instructions.LLVM.LLVMPhiInstruction;
 import jlc.main.Instructions.LLVM.LLVMRelInstruction;
 import jlc.main.Instructions.LLVM.LLVMReturnInstruction;
-import jlc.main.Instructions.LLVM.LLVMSelectInstruction;
 import jlc.main.Instructions.LLVM.LLVMStoreInstruction;
-import jlc.main.Instructions.LLVM.LLVMUnreachableInstruction;
 import jlc.main.Instructions.LLVM.Utils;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.MulType;

@@ -2,7 +2,6 @@ package jlc.main.Instructions.LLVM;
 
 import jlc.main.Instructions.Instruction;
 import jlc.main.Variables.Variable;
-import jlc.main.Variables.VariableType;
 
 public class LLVMSelectInstruction implements Instruction {
     

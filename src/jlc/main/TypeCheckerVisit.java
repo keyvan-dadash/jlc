@@ -3,12 +3,8 @@ package jlc.main;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.management.RuntimeErrorException;
-
-import jlc.lib.javalette.*;
 import jlc.main.Operations.Add;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.And;
