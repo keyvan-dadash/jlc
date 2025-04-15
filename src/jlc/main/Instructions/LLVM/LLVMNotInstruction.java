@@ -13,6 +13,7 @@ public class LLVMNotInstruction implements Instruction {
     public LLVMNotInstruction(Variable operand, Variable result) {
         this.operand = operand;
         this.result = result;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

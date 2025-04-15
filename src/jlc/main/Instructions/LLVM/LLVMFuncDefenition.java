@@ -19,6 +19,7 @@ public class LLVMFuncDefenition implements Instruction {
 
     public void SetVariables(Function fn) {
         this.fn = fn;
+        AddNumOfSpaceForPrefix(0);
     }
 
     @Override

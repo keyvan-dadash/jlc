@@ -6,7 +6,7 @@ public class LLVMFuncDefenitionEnd implements Instruction {
     private int numOfSpace;
 
     public LLVMFuncDefenitionEnd() {
-
+        AddNumOfSpaceForPrefix(0);
     }
 
     @Override

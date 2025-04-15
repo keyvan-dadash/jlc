@@ -27,11 +27,13 @@ public class LLVMJmpInstruction implements Instruction {
         this.label1 = label1;
         this.label2 = label2;
         isConditionJMP = true;
+        AddNumOfSpaceForPrefix(4);
     }
 
     public void SetVariables(String label1) {
         this.label1 = label1;
         isConditionJMP = false;
+        AddNumOfSpaceForPrefix(4);
     }
 
     @Override

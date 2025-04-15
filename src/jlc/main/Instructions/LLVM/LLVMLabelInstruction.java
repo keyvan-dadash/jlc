@@ -8,6 +8,7 @@ public class LLVMLabelInstruction implements Instruction {
 
     public LLVMLabelInstruction(String labelName) {
         this.labelName = labelName;
+        AddNumOfSpaceForPrefix(0);
     }
 
     @Override

@@ -13,6 +13,7 @@ public class LLVMAllocaInstruction implements Instruction {
     public LLVMAllocaInstruction(Variable result, VariableType allocatedType) {
         this.result = result;
         this.allocatedType = allocatedType;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

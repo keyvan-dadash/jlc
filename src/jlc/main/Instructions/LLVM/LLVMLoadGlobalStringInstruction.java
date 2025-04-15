@@ -14,6 +14,7 @@ public class LLVMLoadGlobalStringInstruction implements Instruction {
         this.target = target;
         this.globalName = globalName;
         this.stringLiteral = stringLiteral;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

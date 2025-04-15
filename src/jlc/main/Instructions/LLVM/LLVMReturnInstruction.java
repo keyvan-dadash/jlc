@@ -11,10 +11,12 @@ public class LLVMReturnInstruction implements Instruction {
 
     public LLVMReturnInstruction() {
         this.returnVariable = null;
+        AddNumOfSpaceForPrefix(4);
     }
 
     public LLVMReturnInstruction(Variable returnVariable) {
         this.returnVariable = returnVariable;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

@@ -27,6 +27,7 @@ public class LLVMFuncCallIntruction implements Instruction {
         this.return_var = returnVar;
         this.args = args;
         this.fn = fn;
+        AddNumOfSpaceForPrefix(4);
     }
 
     @Override

@@ -19,13 +19,14 @@ public class LLVMRelInstruction implements Instruction {
     
     public LLVMRelInstruction(RelType relType, Variable var1, Variable var2, Variable result) {
         this.relType = relType;
-        setVariables(var1, var2, result);
+        SetVariables(var1, var2, result);
     }
     
-    public void setVariables(Variable var1, Variable var2, Variable result) {
+    public void SetVariables(Variable var1, Variable var2, Variable result) {
         this.var1 = var1;
         this.var2 = var2;
         this.result = result;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

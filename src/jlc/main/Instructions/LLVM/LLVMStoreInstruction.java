@@ -19,6 +19,7 @@ public class LLVMStoreInstruction implements Instruction {
     public void SetVariables(Variable from, Variable to) {
         this.from = from;
         this.to = to;
+        AddNumOfSpaceForPrefix(4);
     }
 
     @Override

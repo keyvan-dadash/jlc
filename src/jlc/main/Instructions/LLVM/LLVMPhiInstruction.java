@@ -17,6 +17,7 @@ public class LLVMPhiInstruction implements Instruction {
         this.result = result;
         this.type = result.GetVariableType();
         this.incoming = new ArrayList<>();
+        AddNumOfSpaceForPrefix(4);
     }
 
     public void addIncoming(Variable value, String predLabel) {

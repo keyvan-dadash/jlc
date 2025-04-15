@@ -17,6 +17,7 @@ public class LLVMSelectInstruction implements Instruction {
         this.trueValue = trueValue;
         this.falseValue = falseValue;
         this.result = result;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

@@ -12,6 +12,7 @@ public class LLVMNegInstruction implements Instruction {
     public LLVMNegInstruction(Variable operand, Variable result) {
         this.operand = operand;
         this.result = result;
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

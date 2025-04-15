@@ -102,9 +102,7 @@ public class LLVMCodeGeneratorVisit {
           fn.return_var = retrun_var;
           fn.func_args = args;
 
-          LLVMFuncDefenition llvmFuncDefenition = new LLVMFuncDefenition(fn);
-          llvmFuncDefenition.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmFuncDefenition);
+          ctx.instruction_of_ctx.add(new LLVMFuncDefenition(fn));
 
           for (int i = 0; i < args_to_allocate.size(); i++) {
             // First, we should rename the argument
@@ -112,16 +110,12 @@ public class LLVMCodeGeneratorVisit {
             args_to_allocate.set(i, renamedArg);
 
             // Second, we should allocate the arg
-            LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(
+            ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(
                 args_to_allocate.get(i),
-                args_to_allocate.get(i).GetVariableType());
-            llvmAllocaInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmAllocaInstruction);
+                args_to_allocate.get(i).GetVariableType()));
 
             // Now we add store instruction
-            LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(args.get(i), args_to_allocate.get(i));
-            llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmStoreInstruction);
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(args.get(i), args_to_allocate.get(i)));
 
             // we can put the arg in side the loaded variable since it is a register
             ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), args.get(i));
@@ -135,16 +129,11 @@ public class LLVMCodeGeneratorVisit {
           // If this is a void function then the return statement might not be written
           // so we need to check and add return statement instruction to be able to compile.
           if (!ctx.is_ctx_return) {
-            LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction();
-            llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmReturnInstruction);
+            ctx.instruction_of_ctx.add(new LLVMReturnInstruction());
             ctx.is_ctx_return = true;
           }
 
-          LLVMFuncDefenitionEnd llvmFuncDefenitionEnd = new LLVMFuncDefenitionEnd();
-          llvmFuncDefenitionEnd.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmFuncDefenitionEnd);
-
+          ctx.instruction_of_ctx.add(new LLVMFuncDefenitionEnd());
           return ctx;
         }
 
@@ -173,6 +162,7 @@ public class LLVMCodeGeneratorVisit {
       }
     
       public class StmtVisitor implements jlc.lib.javalette.Absyn.Stmt.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+        
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Empty p, LLVMCodeGenCtx ctx) {
           return ctx;
         }
@@ -221,9 +211,7 @@ public class LLVMCodeGeneratorVisit {
 
           // We should store resultVariable to the local variable
           Variable localVariable = ctx.GetVariableFromCtx(p.ident_);
-          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(resultVariable, localVariable);
-          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmStoreInstruction);
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(resultVariable, localVariable));
 
           // Now, we should invalidate all the previous load instructions that loaded this local variable
           // because now it changed so that we load it again if needed.
@@ -241,9 +229,7 @@ public class LLVMCodeGeneratorVisit {
           if (isTmpExist == null) {
             // We need to load the variable
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            LLVMLoadInstruction llvmLoadInstruction = new LLVMLoadInstruction(localVar, isTmpExist);
-            llvmLoadInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmLoadInstruction);
+            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
 
             // We store it as a vriable that has already loaded a local vriable
             ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
@@ -251,14 +237,10 @@ public class LLVMCodeGeneratorVisit {
 
           // We have the isTmpExist as the temp register which loaded a local vriable
           Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          LLVMAddInstruction llvmAddInstruction = new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp);
-          llvmAddInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmAddInstruction);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp));
 
           // Now, we need to store it in the local val
-          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(newTmp, localVar);
-          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmStoreInstruction);
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
 
           // Now remove old loaded tmp vairable
           ctx.UnloadVariable(localVar.GetVariableName());
@@ -279,9 +261,7 @@ public class LLVMCodeGeneratorVisit {
           if (isTmpExist == null) {
             // We need to load the variable
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            LLVMLoadInstruction llvmLoadInstruction = new LLVMLoadInstruction(localVar, isTmpExist);
-            llvmLoadInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmLoadInstruction);
+            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
 
             // We store it as a vriable that has already loaded a local vriable
             ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
@@ -289,14 +269,10 @@ public class LLVMCodeGeneratorVisit {
 
           // We have the isTmpExist as the temp register which loaded a local vriable
           Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          LLVMAddInstruction llvmAddInstruction = new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp);
-          llvmAddInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmAddInstruction);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp));
 
           // Now, we need to store it in the local val
-          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(newTmp, localVar);
-          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmStoreInstruction);
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
 
           // Now remove old loaded tmp vairable
           ctx.UnloadVariable(localVar.GetVariableName());
@@ -312,17 +288,13 @@ public class LLVMCodeGeneratorVisit {
           Variable result = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
-          LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction(result);
-          llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmReturnInstruction);
+          ctx.instruction_of_ctx.add(new LLVMReturnInstruction(result));
           ctx.is_ctx_return = true;
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.VRet p, LLVMCodeGenCtx ctx) {
-          LLVMReturnInstruction llvmReturnInstruction = new LLVMReturnInstruction();
-          llvmReturnInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmReturnInstruction);
+          ctx.instruction_of_ctx.add(new LLVMReturnInstruction());
           ctx.is_ctx_return = true;
           return ctx;
         }
@@ -331,22 +303,19 @@ public class LLVMCodeGeneratorVisit {
           // We should create two label. One label is for taking the statement of if
           // the other one is for not taking the statement, and also a jumping for the 
           // statement inside the if.
-          String ifStLabel = ctx.GetNewLabelWithPrefix("if.statement");
-          String ifEnd = ctx.GetNewLabelWithPrefix("if.end");
+          List<String> labels = ctx.GetNewLabelWithPrefix("if.statement", "if.end");
+          String ifStLabel = labels.get(0);
+          String ifEnd = labels.get(1);
 
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
-          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(conditionResult, ifStLabel, ifEnd);
-          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(conditionResult, ifStLabel, ifEnd));
 
           // Now, we add label instruction before adding statements instructions
-          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(ifStLabel);
-          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(ifStLabel));
 
           LLVMCodeGenCtx ifCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
           p.stmt_.accept(new StmtVisitor(), ifCtx);
@@ -355,15 +324,11 @@ public class LLVMCodeGeneratorVisit {
 
           if (!ifCtx.is_ctx_return) {
             // Now, we should add jump to the if end inside the statment
-            LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
-            llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(ifEnd));
           }
 
           // Now, we add label instruction end after adding statements instructions
-          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(ifEnd);
-          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(ifEnd));
 
           return ctx;
         }
@@ -371,23 +336,20 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.CondElse p, LLVMCodeGenCtx ctx) {
           // We should create three label. One label is for taking the statement of if
           // the other one is for taking the else and the last label is after the if and else.
-          String ifStLabel = ctx.GetNewLabelWithPrefix("if.statement");
-          String elseStLabel = ctx.GetNewLabelWithPrefix("else.statement");
-          String ifEnd = ctx.GetNewLabelWithPrefix("if.end");
+          List<String> labels = ctx.GetNewLabelWithPrefix("if.statement", "else.statement", "if.end");
+          String ifStLabel = labels.get(0);
+          String elseStLabel = labels.get(1);
+          String ifEnd = labels.get(2);
           
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
-          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(conditionResult, ifStLabel, elseStLabel);
-          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(conditionResult, ifStLabel, elseStLabel));
 
           // Now, we add label instruction before adding statements instructions
-          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(ifStLabel);
-          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(ifStLabel));
 
           LLVMCodeGenCtx ifCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
           p.stmt_1.accept(new StmtVisitor(), ifCtx);
@@ -396,15 +358,11 @@ public class LLVMCodeGeneratorVisit {
 
           if (!ifCtx.is_ctx_return) {
             // Now, we should add jump to the if end inside if the statment
-            LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(ifEnd);
-            llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(ifEnd));
           }
 
           // Now, we add else label instruction before adding else statements instructions
-          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(elseStLabel);
-          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(elseStLabel));
 
           LLVMCodeGenCtx elseCtx = LLVMCodeGenCtx.GetSubCtxWithVariables(ctx);
           p.stmt_2.accept(new StmtVisitor(), elseCtx);
@@ -413,16 +371,12 @@ public class LLVMCodeGeneratorVisit {
 
           if (!elseCtx.is_ctx_return) {
             // Now, we should add jump to the if end inside the statment
-            LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(ifEnd);
-            llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(ifEnd));
           }
 
           if (!ifCtx.is_ctx_return || !elseCtx.is_ctx_return) {
             // Now, we add label instruction end after adding statements instructions
-            LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(ifEnd);
-            llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
-            ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+            ctx.instruction_of_ctx.add(new LLVMLabelInstruction(ifEnd));
           }
 
           ctx.is_ctx_return = ifCtx.is_ctx_return && elseCtx.is_ctx_return;
@@ -434,48 +388,37 @@ public class LLVMCodeGeneratorVisit {
           // We should create three label. One label is for re-evaluting condition of while
           // and the second one for taking the statment of while and the last one is for 
           // end of the while.
-          String whileCondLabel = ctx.GetNewLabelWithPrefix("while.cond");
-          String whileStLabel = ctx.GetNewLabelWithPrefix("while.st");
-          String whileEndLabel = ctx.GetNewLabelWithPrefix("while.end");
+          List<String> labels = ctx.GetNewLabelWithPrefix("while.cond", "while.st", "while.end");
+          String whileCondLabel = labels.get(0);
+          String whileStLabel = labels.get(1);
+          String whileEndLabel = labels.get(2);
 
           // We should add a jump to the begining of the while condition in llvm
-          LLVMJmpInstruction jmpToBeginOfCondition = new LLVMJmpInstruction(whileCondLabel);
-          jmpToBeginOfCondition.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(jmpToBeginOfCondition);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(whileCondLabel));
 
           // Now, we add label instruction before expression in order to re-evalute the
           // condition in each iteration of loop.
-          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(whileCondLabel);
-          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(whileCondLabel));
  
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
           ctx.ClearLastVariable();
 
           // We should add the branching instruction after the expression results finished.
-          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(conditionResult, whileStLabel, whileEndLabel);
-          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(conditionResult, whileStLabel, whileEndLabel));
 
           // We should add the while statement label
-          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(whileStLabel);
-          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(whileStLabel));
 
           p.stmt_.accept(new StmtVisitor(), ctx);
 
           // Now, we should jump back to the condition to re-evaluate
-          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(whileCondLabel);
-          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(whileCondLabel));
 
 
           // Here we add the end label so that if the statement of while did not take
           // we continue execution
-          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(whileEndLabel);
-          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(whileEndLabel));
 
           return ctx;
         }
@@ -499,14 +442,10 @@ public class LLVMCodeGeneratorVisit {
           var = ctx.GetRenamedVariable(var);
 
           // Now we need add alloca instruction
-          LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(var, var.GetVariableType());
-          llvmAllocaInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmAllocaInstruction);
+          ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(var, var.GetVariableType()));
 
           // Now, we should intitlize the variable by ourself
-          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(Utils.GetDefaultValueOfVariableType(var.GetVariableType()), var);
-          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmStoreInstruction);
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(Utils.GetDefaultValueOfVariableType(var.GetVariableType()), var));
 
           // Set so that future declaration in the same token get variable of same type
           ctx.SetLastVariable(var);
@@ -524,9 +463,7 @@ public class LLVMCodeGeneratorVisit {
           var = ctx.GetRenamedVariable(var);
 
           // Now we need add alloca instruction
-          LLVMAllocaInstruction llvmAllocaInstruction = new LLVMAllocaInstruction(var, var.GetVariableType());
-          llvmAllocaInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmAllocaInstruction);
+          ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(var, var.GetVariableType()));
 
           // Now lets evaluate its init value
           p.expr_.accept(new ExprVisitor(), ctx);
@@ -534,9 +471,7 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
 
           // Now, we need to load the result into the variable
-          LLVMStoreInstruction llvmStoreInstruction = new LLVMStoreInstruction(var1, var);
-          llvmStoreInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmStoreInstruction);
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(var1, var));
 
           // Set so that future declaration in the same token get variable of same type
           ctx.SetLastVariable(var);
@@ -578,6 +513,8 @@ public class LLVMCodeGeneratorVisit {
       }
     
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+        private boolean IsNewExper = true;
+
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EVar p, LLVMCodeGenCtx ctx) {
           // We first need to check if there is any temp register that has this vairable inside it
           Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
@@ -585,9 +522,7 @@ public class LLVMCodeGeneratorVisit {
             // We need to load the variable
             Variable localVar = ctx.GetVariableFromCtx(p.ident_);
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            LLVMLoadInstruction llvmLoadInstruction = new LLVMLoadInstruction(localVar, isTmpExist);
-            llvmLoadInstruction.AddNumOfSpaceForPrefix(4);
-            ctx.instruction_of_ctx.add(llvmLoadInstruction);
+            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
 
             // We store it as a vriable that has already loaded a local vriable
             ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
@@ -646,21 +581,15 @@ public class LLVMCodeGeneratorVisit {
                 // We need to cast and generate new temp variable for it.
                 Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(args.get(i));
                 String strContent = ctx.global_strings.get(args.get(i).GetVariableName());
-                LLVMLoadGlobalStringInstruction llvmLoadGlobalStringInstruction = 
-                        new LLVMLoadGlobalStringInstruction(tempVariable, args.get(i).GetVariableName(), strContent);
-                llvmLoadGlobalStringInstruction.AddNumOfSpaceForPrefix(4);
-                ctx.instruction_of_ctx.add(llvmLoadGlobalStringInstruction);
+                ctx.instruction_of_ctx.add(new LLVMLoadGlobalStringInstruction(tempVariable, args.get(i).GetVariableName(), strContent));
                 args.set(i, tempVariable);
             }
           }
 
-          LLVMFuncCallIntruction llvmFuncCallIntruction = new LLVMFuncCallIntruction(fn, tmp, args);
-          llvmFuncCallIntruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmFuncCallIntruction);
+          ctx.instruction_of_ctx.add(new LLVMFuncCallIntruction(fn, tmp, args));
 
           // Set the result for rest of the tree
           ctx.SetLastVariable(tmp);
-
           return ctx;
         }
 
@@ -670,9 +599,7 @@ public class LLVMCodeGeneratorVisit {
           gVariable.SetVariableKind(VariableKind.GlobalVariable);
 
           // Lets add global instruction
-          LLVMGlobalStringInstruction llvmGlobalStringInstruction = new LLVMGlobalStringInstruction(gVariable.GetVariableName(), p.string_);
-          llvmGlobalStringInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.global_instructions.add(llvmGlobalStringInstruction);
+          ctx.global_instructions.add(new LLVMGlobalStringInstruction(gVariable.GetVariableName(), p.string_));
 
           ctx.global_strings.put(gVariable.GetVariableName(), p.string_);
           ctx.SetLastVariable(gVariable);
@@ -686,9 +613,7 @@ public class LLVMCodeGeneratorVisit {
 
           // Lets get new temp variable
           Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(result);
-          LLVMNegInstruction llvmNegInstruction = new LLVMNegInstruction(result, tempVariable);
-          llvmNegInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmNegInstruction);
+          ctx.instruction_of_ctx.add(new LLVMNegInstruction(result, tempVariable));
 
           // Set the result now
           ctx.SetLastVariable(tempVariable);
@@ -702,9 +627,7 @@ public class LLVMCodeGeneratorVisit {
 
           // Lets get new temp variable
           Variable tempVariable = ctx.GetNewTempVairableWithTheSameTypeOf(result);
-          LLVMNotInstruction llvmNotInstruction = new LLVMNotInstruction(result, tempVariable);
-          llvmNotInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmNotInstruction);
+          ctx.instruction_of_ctx.add(new LLVMNotInstruction(result, tempVariable));
 
           // Set the result now
           ctx.SetLastVariable(tempVariable);
@@ -728,7 +651,6 @@ public class LLVMCodeGeneratorVisit {
 
           // Now lets generate the rel operation
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
-          llvmMulInstruction.AddNumOfSpaceForPrefix(4);
           llvmMulInstruction.SetVariables(var1, var2, tmp);
           ctx.instruction_of_ctx.add(llvmMulInstruction);
 
@@ -755,7 +677,6 @@ public class LLVMCodeGeneratorVisit {
 
           // Now lets generate the rel operation
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
-          llvmAddInstruction.AddNumOfSpaceForPrefix(4);
           llvmAddInstruction.SetVariables(var1, var2, tmp);
           ctx.instruction_of_ctx.add(llvmAddInstruction);
 
@@ -783,8 +704,7 @@ public class LLVMCodeGeneratorVisit {
           // Now lets generate the rel operation
           // result of rel operation is always boolean
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
-          llvmRelInstruction.AddNumOfSpaceForPrefix(4);
-          llvmRelInstruction.setVariables(var1, var2, tmp);
+          llvmRelInstruction.SetVariables(var1, var2, tmp);
           ctx.instruction_of_ctx.add(llvmRelInstruction);
 
           // Set the result for rest of the tree
@@ -794,13 +714,18 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EAnd p, LLVMCodeGenCtx ctx) {
-          ctx.last_label = "";
+          if (IsNewExper) {
+            // remove labels of last expressions
+            IsNewExper = false;
+            ctx.jmp_labels.clear();
+          }
 
           // Before evaluating first part of and we should jump to a stupid label so that phi 
           // instruction can decide later based on it
-          String andFirstPartTrue = ctx.GetNewLabelWithPrefix("and.first.true");
-          String andFirstPartFalse = ctx.GetNewLabelWithPrefix("and.first.false");
-          String andEnd = ctx.GetNewLabelWithPrefix("and.end");
+          List<String> labels = ctx.GetNewLabelWithPrefix("and.first.true", "and.first.false", "and.end");
+          String andFirstPartTrue = labels.get(0);
+          String andFirstPartFalse = labels.get(1);
+          String andEnd = labels.get(2);
 
           // Now we evaluate the first part of and
           p.expr_1.accept(new ExprVisitor(), ctx);
@@ -808,24 +733,16 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
 
           // Now lets see if the and is true so we can go to the second part
-          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(var1, andFirstPartTrue, andFirstPartFalse);
-          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(var1, andFirstPartTrue, andFirstPartFalse));
 
           // Add the first part label
-          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(andFirstPartFalse);
-          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(andFirstPartFalse));
 
           // Now lets see if the and is true so we can go to the second part
-          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(andEnd);
-          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(andEnd));
 
           // Add the second part label
-          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(andFirstPartTrue);
-          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(andFirstPartTrue));
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
@@ -833,41 +750,39 @@ public class LLVMCodeGeneratorVisit {
 
           // Lets write the and instruction of both var1 and var2
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
-          LLVMAndInstruction llvmAndInstruction = new LLVMAndInstruction(var1, var2, tmp);
-          llvmAndInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmAndInstruction);
+          ctx.instruction_of_ctx.add(new LLVMAndInstruction(var1, var2, tmp));
 
           // Now jump to the end
-          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(andEnd);
-          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(andEnd));
 
           // Lets add the end label
-          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(andEnd);
-          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(andEnd));
 
           // Now lets decide the final result based on the branch we took using phi instruction
           Variable tmp1 = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
           LLVMPhiInstruction llvmPhiInstruction = new LLVMPhiInstruction(tmp1);
-          llvmPhiInstruction.addIncoming(tmp, ctx.last_label == "" ? andFirstPartTrue : ctx.last_label);
+          llvmPhiInstruction.addIncoming(tmp,  ctx.jmp_labels.isEmpty() ? andFirstPartTrue : ctx.jmp_labels.pop());
           llvmPhiInstruction.addIncoming(var1, andFirstPartFalse);
-          llvmPhiInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmPhiInstruction);
 
+          ctx.jmp_labels.push(andEnd);
           ctx.SetLastVariable(tmp1);
-          ctx.last_label = andEnd;
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EOr p, LLVMCodeGenCtx ctx) {
-          ctx.last_label = "";
+          if (IsNewExper) {
+            // remove labels of last expressions
+            IsNewExper = false;
+            ctx.jmp_labels.clear();
+          }
 
           // Before evaluating first part of or we should jump to a stupid label so that phi 
           // instruction can decide later based on it
-          String orFirstPartTrue = ctx.GetNewLabelWithPrefix("or.first.true");
-          String orFirstPartFalse = ctx.GetNewLabelWithPrefix("or.first.false");
-          String orEnd = ctx.GetNewLabelWithPrefix("or.end");
+          List<String> labels = ctx.GetNewLabelWithPrefix("or.first.true", "or.first.false", "or.end");
+          String orFirstPartTrue = labels.get(0);
+          String orFirstPartFalse = labels.get(1);
+          String orEnd = labels.get(2);
 
           // Now we evaluate the first part of or
           p.expr_1.accept(new ExprVisitor(), ctx);
@@ -875,24 +790,16 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
 
           // Now lets see if the or is false so we can go to the second part
-          LLVMJmpInstruction llvmJmpInstruction = new LLVMJmpInstruction(var1, orFirstPartTrue, orFirstPartFalse);
-          llvmJmpInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(var1, orFirstPartTrue, orFirstPartFalse));
 
           // Add the first part label
-          LLVMLabelInstruction llvmLabelInstruction = new LLVMLabelInstruction(orFirstPartTrue);
-          llvmLabelInstruction.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(orFirstPartTrue));
 
           // Now lets see if the or is true so we can go to the second part
-          LLVMJmpInstruction llvmJmpInstruction1 = new LLVMJmpInstruction(orEnd);
-          llvmJmpInstruction1.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(orEnd));
 
           // Add the second part label
-          LLVMLabelInstruction llvmLabelInstruction1 = new LLVMLabelInstruction(orFirstPartFalse);
-          llvmLabelInstruction1.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction1);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(orFirstPartFalse));
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
@@ -900,30 +807,23 @@ public class LLVMCodeGeneratorVisit {
 
           // Lets write the or instruction of both var1 and var2
           Variable tmp = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
-          LLVMOrInstruction llvmOrInstruction = new LLVMOrInstruction(var1, var2, tmp);
-          llvmOrInstruction.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmOrInstruction);
+          ctx.instruction_of_ctx.add(new LLVMOrInstruction(var1, var2, tmp));
 
           // Now jump to the end
-          LLVMJmpInstruction llvmJmpInstruction2 = new LLVMJmpInstruction(orEnd);
-          llvmJmpInstruction2.AddNumOfSpaceForPrefix(4);
-          ctx.instruction_of_ctx.add(llvmJmpInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMJmpInstruction(orEnd));
 
           // Lets add the end label
-          LLVMLabelInstruction llvmLabelInstruction2 = new LLVMLabelInstruction(orEnd);
-          llvmLabelInstruction2.AddNumOfSpaceForPrefix(0);
-          ctx.instruction_of_ctx.add(llvmLabelInstruction2);
+          ctx.instruction_of_ctx.add(new LLVMLabelInstruction(orEnd));
 
           // Now lets decide the final result based on the branch we took using phi instruction
           Variable tmp1 = ctx.GetNewTempVairableWithTheSameTypeOf(var2);
           LLVMPhiInstruction llvmPhiInstruction = new LLVMPhiInstruction(tmp1);
-          llvmPhiInstruction.addIncoming(tmp, ctx.last_label == "" ? orFirstPartFalse : ctx.last_label);
+          llvmPhiInstruction.addIncoming(tmp, ctx.jmp_labels.isEmpty() ? orFirstPartFalse : ctx.jmp_labels.pop());
           llvmPhiInstruction.addIncoming(var1, orFirstPartTrue);
-          llvmPhiInstruction.AddNumOfSpaceForPrefix(4);
           ctx.instruction_of_ctx.add(llvmPhiInstruction);
 
+          ctx.jmp_labels.push(orEnd);
           ctx.SetLastVariable(tmp1);
-          ctx.last_label = orEnd;
           return ctx;
         }
       }

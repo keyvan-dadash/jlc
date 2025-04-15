@@ -7,7 +7,7 @@ public class LLVMUnreachableInstruction implements Instruction {
     private int numOfSpace;
 
     public LLVMUnreachableInstruction() {
-        // No additional initialization needed.
+        AddNumOfSpaceForPrefix(4);
     }
     
     @Override

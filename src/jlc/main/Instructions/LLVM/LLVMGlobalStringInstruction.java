@@ -10,6 +10,7 @@ public class LLVMGlobalStringInstruction implements Instruction {
     public LLVMGlobalStringInstruction(String globalName, String stringValue) {
         this.globalName = globalName;
         this.stringValue = stringValue;
+        AddNumOfSpaceForPrefix(0);
     }
     
     @Override

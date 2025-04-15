@@ -20,6 +20,7 @@ public class LLVMOrInstruction implements Instruction {
         this.var1 = var1;
         this.var2 = var2;
         this.result = result;
+        AddNumOfSpaceForPrefix(4);
     }
 
     @Override

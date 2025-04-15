@@ -4,26 +4,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import jlc.main.Instructions.Instruction;
 import jlc.main.Variables.Variable;
 
 public class LLVMCodeGenCtx {
 
-    // temp_variable_counter is the counter for creating a new temporary variable
+    // temp_variable_counter is a counter for creating a new temporary variable
     public int temp_variable_counter;
 
-    // label_counter is the counter for creating a new label each time
+    // label_counter is a counter for creating a new label each time
     public int label_counter;
 
-    // gloabl_variable_counter is the counter for creating global variables.
+    // gloabl_variable_counter is a counter for creating global variables.
     public int gloabl_variable_counter;
 
-    // rename_variable_counter is counter for creating an indirect variable name
+    // rename_variable_counter is a counter for creating an indirect variable name
     // for renaming local variables.
     public int rename_variable_counter;
 
     // global_instructions holds instructions that should be put in the begining of the llvm output
+    // such as putting the data of string
     public List<Instruction> global_instructions;
 
     // instruction_of_ctx holds normal instructions
@@ -37,32 +39,45 @@ public class LLVMCodeGenCtx {
     private Variable last_variable;
 
     // ctx_variables holds local variables of this ctx.
-    // Note: this is a private attribute because we dont hold the variable simply.
-    // Instead we hold them as another name. For example, if we have variable named i 
+    // Note: this is a private attribute because we dont simply hold the variables of ctx.
+    // Instead, we hold them by another name. For example, if we have variable named i 
     // in the function we rename it to var1_i. We have to do this in order to support 
-    // shadow variables.
+    // shadow variables. In another word, we are doing is uniqueize the local variables.
     private Map<String, Variable> ctx_variables;
 
-    // mapped_varibles holds the map of variables to the renamed variables.
+    // mapped_varibles holds the map of the real local variables to the renamed ones.
     private Map<String, String> mapped_varibles;
 
     // loaded_variables holds map of local variables to the temporary variables that
-    // have loaded this value because we hold all the local variables as pointer so we
-    // need to load them into temporary variables.
+    // have loaded the local variable because we hold all the local variables as pointer so we
+    // need to load them into temporary variables. Thus, we store the last temporary variable
+    // that loaded each local variables. Upon each store operation, we look into this map 
+    // and invalidate the temporary variable since that temporary variable has a value that is 
+    // not longer as same as the local variable since we store something new in the local variable.
+    // Therefore, we need to load the local variable again but in a new temporary variable.
     private Map<String, Variable> loaded_variables;
     
     // functions keeps declared function of ctx.
+    // we need this in order to form the defenition of functions
+    // in llvm.
     public Map<String, Function> functions;
 
+    // We need to keep the map of global strings name to their 
+    // content.
     public Map<String, String> global_strings;
 
+    // parent shows what is the parent of ctx. This is need 
+    // because sometimes we generate a new ctx but still we need
+    // to search for variables and these stuff in our parents.
     private LLVMCodeGenCtx parent;
 
     // is_ctx_return will tell us whether the ctx return or not.
     // This is important in the code generation of if and else.
     public Boolean is_ctx_return;
 
-    public String last_label;
+    // jmp_labels holds final jmp label of "and" and "or" in order to suppoer
+    // nester "and" and "or" using phi instruction.
+    public Stack<String> jmp_labels;
 
     LLVMCodeGenCtx() {
         temp_variable_counter = 0;
@@ -78,7 +93,7 @@ public class LLVMCodeGenCtx {
         last_variable = null;
         parent = null;
         is_ctx_return = false;
-        last_label = "";
+        jmp_labels = new Stack<>();
     }
 
     // GetNewTempVairableWithTheSameTypeOf returns a new unique temporary variable.
@@ -100,9 +115,18 @@ public class LLVMCodeGenCtx {
         return String.format("label_%s", String.valueOf(label_counter++));
     }
 
-    // GetNewLabelWithPrefix returns a unique label with prefix.
-    public String GetNewLabelWithPrefix(String prefix) {
-        return String.format("%s_%s", prefix, String.valueOf(label_counter++));
+    // GetNewLabelWithPrefix returns a unique label with each prefix.
+    // Note: list of prefixes should be unique because we only increase our
+    // label counter only after we generated label for each of this prefixes.
+    public List<String> GetNewLabelWithPrefix(String... prefixs) {
+        List<String> labels = new ArrayList<>();
+        for (String prefix : prefixs) {
+            labels.add(String.format("%s_%s", prefix, String.valueOf(label_counter)));
+        }
+
+        // Now, lets increase the counter.
+        label_counter++;
+        return labels;
     }
 
     // ResetCounters resets the counters that this class use for creating unique label, temporary vairable
@@ -111,6 +135,10 @@ public class LLVMCodeGenCtx {
         temp_variable_counter = 0;
         label_counter = 0;
         rename_variable_counter = 0;
+
+        // We shouldnt reset global counter since
+        // the global counter should be consistent
+        // among all the ctx.
     }
 
     // SetLastVariable sets last variable.
@@ -163,6 +191,10 @@ public class LLVMCodeGenCtx {
         this.gloabl_variable_counter = ctx.gloabl_variable_counter;
     }
 
+    // GetRenamedVariable returns a new name for the vairable
+    // this is because we need a new name so that we support shadow variables.
+    // Note: if this API called multiple times we might endup with the same name.
+    // We only increase our renamed counter after the calling of AddToCtxVariable.
     public Variable GetRenamedVariable(Variable var) {
         String renameVar = "var" + String.valueOf(rename_variable_counter) + "_" + var.GetVariableName();
         Variable renameVariable = var.GetNewVariableSameType();
@@ -182,6 +214,12 @@ public class LLVMCodeGenCtx {
         ctx_variables.put(var.GetVariableName(), var);
     }
 
+    // extractVariableNameFromRenamedName will extract a the name of the original variable
+    // from the renamed variable. Here is how we extract:
+    // Every renamed variable is like this: var(number)_(name of original variable)
+    // For example:
+    //          var2_r
+    //          var4_name
     private String extractVariableNameFromRenamedName(String input) {
         int underscoreIndex = input.indexOf("_");
         if (underscoreIndex != -1 && underscoreIndex < input.length() - 1) {
@@ -206,6 +244,8 @@ public class LLVMCodeGenCtx {
         return ctx_variables.get(renamedVar);
     }
 
+    // AddVariabelAsLoaded will put the temporary variable that loaded the local variable
+    // inside the context.
     public void AddVariabelAsLoaded(String loadedVariableName, Variable tempVariable) {
         // First we should renamed name
         String renamedVar = mapped_varibles.get(loadedVariableName);
@@ -219,6 +259,8 @@ public class LLVMCodeGenCtx {
         }
     }
 
+    // GetVariableIfLoaded tries to find the temporary variable
+    // that loaded the local variable. If not it will return null.
     public Variable GetVariableIfLoaded(String loadedVariable) {
         // First we should renamed name
         String renamedVar = mapped_varibles.get(loadedVariable);
@@ -233,6 +275,7 @@ public class LLVMCodeGenCtx {
         return loaded_variables.get(renamedVar);
     }
 
+    // UnloadVariable will remove the temporary variable that loaded this local variable.
     public void UnloadVariable(String variableToUnload) {
         // First we should renamed name
         String renamedVar = mapped_varibles.get(variableToUnload);
