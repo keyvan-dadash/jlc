@@ -5,10 +5,8 @@ package jlc.lib.javalette.Absyn;
 public abstract class Type implements java.io.Serializable {
   public abstract <R,A> R accept(Type.Visitor<R,A> v, A arg);
   public interface Visitor <R,A> {
-    public R visit(jlc.lib.javalette.Absyn.Int p, A arg);
-    public R visit(jlc.lib.javalette.Absyn.Doub p, A arg);
-    public R visit(jlc.lib.javalette.Absyn.Bool p, A arg);
-    public R visit(jlc.lib.javalette.Absyn.Void p, A arg);
+    public R visit(jlc.lib.javalette.Absyn.TypeBase p, A arg);
+    public R visit(jlc.lib.javalette.Absyn.ArrType p, A arg);
     public R visit(jlc.lib.javalette.Absyn.Fun p, A arg);
 
   }

@@ -267,8 +267,7 @@ public class ComposVisitor<A> implements
     public jlc.lib.javalette.Absyn.Expr visit(jlc.lib.javalette.Absyn.ArrLen p, A arg)
     {
       jlc.lib.javalette.Absyn.Expr expr_ = p.expr_.accept(this, arg);
-      String ident_ = p.ident_;
-      return new jlc.lib.javalette.Absyn.ArrLen(expr_, ident_);
+      return new jlc.lib.javalette.Absyn.ArrLen(expr_);
     }
     public jlc.lib.javalette.Absyn.Expr visit(jlc.lib.javalette.Absyn.NewArr p, A arg)
     {

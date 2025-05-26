@@ -11,6 +11,7 @@ public interface AllVisitor<R,A> extends
   jlc.lib.javalette.Absyn.Blk.Visitor<R,A>,
   jlc.lib.javalette.Absyn.Stmt.Visitor<R,A>,
   jlc.lib.javalette.Absyn.Item.Visitor<R,A>,
+  jlc.lib.javalette.Absyn.BaseType.Visitor<R,A>,
   jlc.lib.javalette.Absyn.Type.Visitor<R,A>,
   jlc.lib.javalette.Absyn.Expr.Visitor<R,A>,
   jlc.lib.javalette.Absyn.AddOp.Visitor<R,A>,

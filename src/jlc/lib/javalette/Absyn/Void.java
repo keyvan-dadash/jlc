@@ -2,10 +2,10 @@
 
 package jlc.lib.javalette.Absyn;
 
-public class Void  extends Type {
+public class Void  extends BaseType {
   public Void() { }
 
-  public <R,A> R accept(jlc.lib.javalette.Absyn.Type.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(jlc.lib.javalette.Absyn.BaseType.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;

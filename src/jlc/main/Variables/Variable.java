@@ -18,6 +18,8 @@ public interface Variable {
     // GetVariableKind returns the kind of this variable, which cloud be FuncParam, FunRet and etc.
     VariableKind GetVariableKind();
 
+    Variable GetArrayType();
+
     // SetVariableType allows us to set the king of this variable to FunParam, FunRet and etc. 
     void SetVariableKind(VariableKind type);
 

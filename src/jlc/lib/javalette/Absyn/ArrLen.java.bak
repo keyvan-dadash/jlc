@@ -2,16 +2,16 @@
 
 package jlc.lib.javalette.Absyn;
 
-public class Incr  extends Stmt {
+public class ArrLen  extends Expr {
   public final Expr expr_;
-  public Incr(Expr p1) { expr_ = p1; }
+  public ArrLen(Expr p1) { expr_ = p1; }
 
-  public <R,A> R accept(jlc.lib.javalette.Absyn.Stmt.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(jlc.lib.javalette.Absyn.Expr.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;
-    if (o instanceof jlc.lib.javalette.Absyn.Incr) {
-      jlc.lib.javalette.Absyn.Incr x = (jlc.lib.javalette.Absyn.Incr)o;
+    if (o instanceof jlc.lib.javalette.Absyn.ArrLen) {
+      jlc.lib.javalette.Absyn.ArrLen x = (jlc.lib.javalette.Absyn.ArrLen)o;
       return this.expr_.equals(x.expr_);
     }
     return false;

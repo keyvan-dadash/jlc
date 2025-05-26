@@ -78,11 +78,12 @@ IDENT = ({LETTER}|{DIGIT}|['_])
 <YYINITIAL>for { return cf.newSymbol("", sym._SYMB_31, left_loc(), right_loc()); }
 <YYINITIAL>if { return cf.newSymbol("", sym._SYMB_32, left_loc(), right_loc()); }
 <YYINITIAL>int { return cf.newSymbol("", sym._SYMB_33, left_loc(), right_loc()); }
-<YYINITIAL>new { return cf.newSymbol("", sym._SYMB_34, left_loc(), right_loc()); }
-<YYINITIAL>return { return cf.newSymbol("", sym._SYMB_35, left_loc(), right_loc()); }
-<YYINITIAL>true { return cf.newSymbol("", sym._SYMB_36, left_loc(), right_loc()); }
-<YYINITIAL>void { return cf.newSymbol("", sym._SYMB_37, left_loc(), right_loc()); }
-<YYINITIAL>while { return cf.newSymbol("", sym._SYMB_38, left_loc(), right_loc()); }
+<YYINITIAL>length { return cf.newSymbol("", sym._SYMB_34, left_loc(), right_loc()); }
+<YYINITIAL>new { return cf.newSymbol("", sym._SYMB_35, left_loc(), right_loc()); }
+<YYINITIAL>return { return cf.newSymbol("", sym._SYMB_36, left_loc(), right_loc()); }
+<YYINITIAL>true { return cf.newSymbol("", sym._SYMB_37, left_loc(), right_loc()); }
+<YYINITIAL>void { return cf.newSymbol("", sym._SYMB_38, left_loc(), right_loc()); }
+<YYINITIAL>while { return cf.newSymbol("", sym._SYMB_39, left_loc(), right_loc()); }
 <YYINITIAL>"#"[^\n]* { /* skip */ }
 <YYINITIAL>"//"[^\n]* { /* skip */ }
 <YYINITIAL>"/*" { yybegin(COMMENT); }

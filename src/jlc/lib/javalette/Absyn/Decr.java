@@ -3,8 +3,8 @@
 package jlc.lib.javalette.Absyn;
 
 public class Decr  extends Stmt {
-  public final String ident_;
-  public Decr(String p1) { ident_ = p1; }
+  public final Expr expr_;
+  public Decr(Expr p1) { expr_ = p1; }
 
   public <R,A> R accept(jlc.lib.javalette.Absyn.Stmt.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
@@ -12,13 +12,13 @@ public class Decr  extends Stmt {
     if (this == o) return true;
     if (o instanceof jlc.lib.javalette.Absyn.Decr) {
       jlc.lib.javalette.Absyn.Decr x = (jlc.lib.javalette.Absyn.Decr)o;
-      return this.ident_.equals(x.ident_);
+      return this.expr_.equals(x.expr_);
     }
     return false;
   }
 
   public int hashCode() {
-    return this.ident_.hashCode();
+    return this.expr_.hashCode();
   }
 
 

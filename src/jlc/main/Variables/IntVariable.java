@@ -46,11 +46,21 @@ public class IntVariable implements Variable {
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.Int;
+        if (var == null) return false;
+        if (var instanceof ArrayVariable) {
+            return ((ArrayVariable) var).GetArrayType().GetVariableType() == VariableType.Int;
+        }
+        return var.GetVariableType() == VariableType.Int;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
         return new IntVariable("last", VariableKind.Unkown);
+    }
+
+    @Override
+    public Variable GetArrayType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'GetArrayType'");
     }
 }

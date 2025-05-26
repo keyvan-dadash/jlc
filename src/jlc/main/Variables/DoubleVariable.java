@@ -46,11 +46,21 @@ public class DoubleVariable implements Variable {
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.Double;
+        if (var == null) return false;
+        if (var instanceof ArrayVariable) {
+            return ((ArrayVariable) var).GetArrayType().GetVariableType() == VariableType.Double;
+        }
+        return var.GetVariableType() == VariableType.Double;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
         return new DoubleVariable("last", VariableKind.Unkown);
+    }
+
+    @Override
+    public Variable GetArrayType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'GetArrayType'");
     }
 }

@@ -39,6 +39,8 @@ public class StringVariable implements Variable {
         return this.variableKind;
     }
 
+    
+
     @Override
     public void SetVariableKind(VariableKind type) {
         this.variableKind = type;
@@ -46,11 +48,20 @@ public class StringVariable implements Variable {
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.String;
+    if (var == null) return false;
+    if (var instanceof ArrayVariable) {
+        return ((ArrayVariable) var).GetArrayType().GetVariableType() == VariableType.String;
+    }
+    return var.GetVariableType() == VariableType.String;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
         return new StringVariable("last", VariableKind.Unkown);
+    }
+
+    @Override
+    public Variable GetArrayType() {
+        throw new UnsupportedOperationException("Unimplemented method 'GetArrayType'");
     }
 }

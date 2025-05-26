@@ -12,6 +12,9 @@ public abstract class Expr implements java.io.Serializable {
     public R visit(jlc.lib.javalette.Absyn.ELitFalse p, A arg);
     public R visit(jlc.lib.javalette.Absyn.EApp p, A arg);
     public R visit(jlc.lib.javalette.Absyn.EString p, A arg);
+    public R visit(jlc.lib.javalette.Absyn.ArrIndex p, A arg);
+    public R visit(jlc.lib.javalette.Absyn.ArrLen p, A arg);
+    public R visit(jlc.lib.javalette.Absyn.NewArr p, A arg);
     public R visit(jlc.lib.javalette.Absyn.Neg p, A arg);
     public R visit(jlc.lib.javalette.Absyn.Not p, A arg);
     public R visit(jlc.lib.javalette.Absyn.EMul p, A arg);

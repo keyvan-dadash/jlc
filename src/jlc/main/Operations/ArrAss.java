@@ -6,17 +6,16 @@ import java.util.Map;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableType;
 
-public class Ass implements Operation {
+public class ArrAss implements Operation {
 
     public Map<VariableType, VariableType> execute_allowance;
 
-    public Ass() {
+    public ArrAss() {
         execute_allowance = new HashMap<>();
 
         execute_allowance.put(VariableType.Int, VariableType.Int);
         execute_allowance.put(VariableType.Double, VariableType.Double);
         execute_allowance.put(VariableType.Boolean, VariableType.Boolean);
-        execute_allowance.put(VariableType.Array, VariableType.Array);
     }
 
     @Override

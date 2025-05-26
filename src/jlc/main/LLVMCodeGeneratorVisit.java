@@ -4,6 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import jlc.lib.javalette.Absyn.ArrAss;
+import jlc.lib.javalette.Absyn.ArrAssExpr;
+import jlc.lib.javalette.Absyn.ArrDecr;
+import jlc.lib.javalette.Absyn.ArrIncr;
+import jlc.lib.javalette.Absyn.ArrIndex;
+import jlc.lib.javalette.Absyn.ArrLen;
+import jlc.lib.javalette.Absyn.ArrType;
+import jlc.lib.javalette.Absyn.ForEach;
+import jlc.lib.javalette.Absyn.NewArr;
+import jlc.lib.javalette.Absyn.TypeBase;
 import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.LLVM.LLVMAddInstruction;
 import jlc.main.Instructions.LLVM.LLVMAllocaInstruction;
@@ -217,65 +227,65 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Incr p, LLVMCodeGenCtx ctx) {
-          Variable one = new IntVariable("1");
-          one.SetVariableKind(VariableKind.ConstantVariable);
+          // Variable one = new IntVariable("1");
+          // one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // // We first need to check if there is any temp register that has this vairable inside it
+          // Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
+          // Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
+          // if (isTmpExist == null) {
+          //   // We need to load the variable
+          //   isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
+          //   ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
 
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          }
+          //   // We store it as a vriable that has already loaded a local vriable
+          //   ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+          // }
 
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp));
+          // // We have the isTmpExist as the temp register which loaded a local vriable
+          // Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
+          // ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp));
 
-          // Now, we need to store it in the local val
-          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
+          // // Now, we need to store it in the local val
+          // ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
 
-          // Now remove old loaded tmp vairable
-          ctx.UnloadVariable(localVar.GetVariableName());
+          // // Now remove old loaded tmp vairable
+          // ctx.UnloadVariable(localVar.GetVariableName());
 
-          // Store the new loaded variable
-          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
+          // // Store the new loaded variable
+          // ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Decr p, LLVMCodeGenCtx ctx) {
-          Variable one = new IntVariable("1");
-          one.SetVariableKind(VariableKind.ConstantVariable);
+          // Variable one = new IntVariable("1");
+          // one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // // We first need to check if there is any temp register that has this vairable inside it
+          // Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
+          // Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
+          // if (isTmpExist == null) {
+          //   // We need to load the variable
+          //   isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
+          //   ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
 
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          }
+          //   // We store it as a vriable that has already loaded a local vriable
+          //   ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+          // }
 
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp));
+          // // We have the isTmpExist as the temp register which loaded a local vriable
+          // Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
+          // ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp));
 
-          // Now, we need to store it in the local val
-          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
+          // // Now, we need to store it in the local val
+          // ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
 
-          // Now remove old loaded tmp vairable
-          ctx.UnloadVariable(localVar.GetVariableName());
+          // // Now remove old loaded tmp vairable
+          // ctx.UnloadVariable(localVar.GetVariableName());
 
-          // Store the new loaded variable
-          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
+          // // Store the new loaded variable
+          // ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
@@ -425,6 +435,36 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
           return ctx;
         }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrAss p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrAssExpr p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ForEach p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrIncr p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrDecr p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
       }
     
       public class ItemVisitor implements jlc.lib.javalette.Absyn.Item.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
@@ -506,6 +546,18 @@ public class LLVMCodeGeneratorVisit {
             x.accept(new TypeVisitor(), ctx);
           }
           return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(TypeBase p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrType p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
         }
       }
     
@@ -822,6 +874,24 @@ public class LLVMCodeGeneratorVisit {
           ctx.jmp_labels.push(orEnd);
           ctx.SetLastVariable(tmp1);
           return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrIndex p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrLen p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(NewArr p, LLVMCodeGenCtx arg) {
+          // TODO Auto-generated method stub
+          throw new UnsupportedOperationException("Unimplemented method 'visit'");
         }
       }
     

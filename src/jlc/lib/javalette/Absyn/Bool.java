@@ -2,10 +2,10 @@
 
 package jlc.lib.javalette.Absyn;
 
-public class Bool  extends Type {
+public class Bool  extends BaseType {
   public Bool() { }
 
-  public <R,A> R accept(jlc.lib.javalette.Absyn.Type.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
+  public <R,A> R accept(jlc.lib.javalette.Absyn.BaseType.Visitor<R,A> v, A arg) { return v.visit(this, arg); }
 
   public boolean equals(java.lang.Object o) {
     if (this == o) return true;

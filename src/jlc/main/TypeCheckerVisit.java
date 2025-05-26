@@ -1,10 +1,27 @@
 package jlc.main;
 
+import java.security.spec.ECFieldF2m;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
 
+import jlc.lib.javalette.Absyn.ArrAss;
+import jlc.lib.javalette.Absyn.ArrAssExpr;
+import jlc.lib.javalette.Absyn.ArrDecr;
+import jlc.lib.javalette.Absyn.ArrIncr;
+import jlc.lib.javalette.Absyn.ArrIndex;
+import jlc.lib.javalette.Absyn.ArrLen;
+import jlc.lib.javalette.Absyn.ArrType;
+import jlc.lib.javalette.Absyn.Bool;
+import jlc.lib.javalette.Absyn.Doub;
+import jlc.lib.javalette.Absyn.EVar;
+import jlc.lib.javalette.Absyn.ForEach;
+import jlc.lib.javalette.Absyn.Fun;
+import jlc.lib.javalette.Absyn.Int;
+import jlc.lib.javalette.Absyn.NewArr;
+import jlc.lib.javalette.Absyn.TypeBase;
+import jlc.lib.javalette.Absyn.Void;
 import jlc.main.Operations.Add;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.And;
@@ -21,6 +38,7 @@ import jlc.main.Variables.Variable;
 import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.StringVariable;
 import jlc.main.Variables.VoidVariable;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 
@@ -122,6 +140,161 @@ public class TypeCheckerVisit {
       }
     
       public class StmtVisitor implements jlc.lib.javalette.Absyn.Stmt.Visitor<Ctx, Ctx> {
+        public Ctx visit(ArrAssExpr p, Ctx ctx) {
+          ctx.last_expr_result = null;
+          // Evaluate the array variable
+          ctx = p.expr_1.accept(new ExprVisitor(), ctx);
+          Variable left_side_var = ctx.last_expr_result;
+
+          if (!(left_side_var instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("In ArrAssExpr: Variable: %s is not an array", left_side_var));
+          }
+          
+          // Evaluate the index
+          ctx.last_expr_result = null;
+          ctx = p.expr_2.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException("Array index must be an integer");
+          }
+
+          // Evaluate the value to assign
+          ctx.last_expr_result = null;
+          ctx = p.expr_3.accept(new ExprVisitor(), ctx);
+          Variable valueVar = ctx.last_expr_result;
+          if (!left_side_var.GetArrayType().IsSameAs(valueVar)) {
+            throw new RuntimeException("Value type does not match array type");
+          }
+          // Now we have the array variable, index and value to assign.
+          Operation op = new Ass();
+          op.Execute(left_side_var.GetArrayType(), valueVar);
+
+
+          return ctx;
+        }
+
+        public Ctx visit(ArrIncr p, Ctx ctx) {
+          //Check that the array index is an int
+          ctx.last_expr_result = null;
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException("Variable index is not an integer");
+          }
+          // Check that identity is an array variable
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+          if (left_side_var == null) {
+            throw new RuntimeException(String.format("In ArrIncr: variable %s has not be decelared before", p.ident_));
+          }
+          if (!(left_side_var instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("variable %s is not an array", p.ident_));
+          }
+
+          Operation add = new Add(AddType.Minus);
+          
+          Variable one = new IntVariable("1");
+
+          add.Execute(left_side_var.GetArrayType() , one);
+
+          return ctx;
+        }
+
+        public Ctx visit(ArrDecr p, Ctx ctx) {
+          //Check that the array index is an int
+          ctx.last_expr_result = null;
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException("Variable index is not an integer");
+          }
+          // Check that identity is an array variable
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+          if (left_side_var == null) {
+            throw new RuntimeException(String.format("In ArrDecr: variable %s has not be decelared before", p.ident_));
+          }
+          if (!(left_side_var instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("variable %s is not an array", p.ident_));
+          }
+
+          Operation add = new Add(AddType.Plus);
+          
+          Variable one = new IntVariable("1");
+
+          add.Execute(left_side_var.GetArrayType() , one);
+
+          return ctx;
+        }
+
+        public Ctx visit(ArrAss p, Ctx ctx) {
+          // Evaluate the array variable
+          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+          if (!(left_side_var instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("In ArrAss: Variable: %s is not an array", left_side_var));
+          }
+          ctx.last_expr_result = null;
+          // Evaluate the index
+          ctx = p.expr_1.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException(String.format("In ArrAss: Array index %s must be an integer", indexVar));
+          }
+          ctx.last_expr_result = null;
+
+          // Evaluate the value to assign
+          ctx = p.expr_2.accept(new ExprVisitor(), ctx);
+          Variable valueVar = ctx.last_expr_result;
+          if (!left_side_var.GetArrayType().IsSameAs(valueVar)) {
+            throw new RuntimeException("Value type does not match array type");
+          }
+
+          // Now we have the array variable, index and value to assign.
+          Operation op = new Ass();
+          // throw new RuntimeException(String.format("In ArrAss: Left side var %s, and value to assign: %s", left_side_var, valueVar));
+          Variable return_var = op.Execute(left_side_var.GetArrayType(), valueVar); 
+
+          return ctx;
+        }
+
+        public Ctx visit(ForEach p, Ctx ctx) {
+          //Check the type
+          ctx.last_expr_result = null;
+          ctx = p.type_.accept(new TypeVisitor(), ctx);
+          Variable typeVar = ctx.last_expr_result;
+          
+          //Check that var has not been declared before
+          if (ctx.ctx_variables.containsKey(p.ident_)) {
+              throw new RuntimeException(String.format("Identity: %s is already in use in this scope", p.ident_));
+          }
+
+          // Check that expr evaluates to an array
+          ctx.last_expr_result = null;
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable arrVar = ctx.last_expr_result;
+          if (!(arrVar instanceof ArrayVariable)) {
+            throw new RuntimeException("Expression is not an array");
+          }
+
+          // Check that the type of the array matches the type of the loop variable
+          if (!arrVar.GetArrayType().IsSameAs(typeVar)) {
+            throw new RuntimeException(String.format("Array type %s does not match loop variable type %s", arrVar.GetArrayType(), typeVar));
+          }
+
+          // Create a new variable for the loop variable
+          Variable loopVar = typeVar.GetNewVariableSameType();
+          loopVar.SetVariableName(p.ident_);
+          loopVar.SetVariableKind(typeVar.GetVariableKind());
+
+          // Create a new child context for the loop variable
+          Ctx loopCtx = Ctx.WithoutVariables(ctx, "forEach"); // inherits parent variables, but new variable map
+          loopCtx.ctx_variables.put(loopVar.GetVariableName(), loopVar);
+
+          // Visit the loop body with the new context
+          loopCtx = p.stmt_.accept(new StmtVisitor(), loopCtx);
+
+          return ctx;
+        }
+
         public Ctx visit(jlc.lib.javalette.Absyn.Empty p, Ctx ctx) {
           return ctx;
         }
@@ -177,7 +350,7 @@ public class TypeCheckerVisit {
 
           // Variable does not exist
           if (left_side_var == null) {
-            throw new RuntimeException(String.format("variable %s has not be decelared before", left_side_var.GetVariableName()));
+            throw new RuntimeException(String.format("In Ass: variable %s has not be decelared before", left_side_var.GetVariableName()));
           }
 
           Operation op = new Ass();
@@ -191,17 +364,13 @@ public class TypeCheckerVisit {
         public Ctx visit(jlc.lib.javalette.Absyn.Incr p, Ctx ctx) {
           // This is same as add with one
           ctx.last_expr_result = null;
-          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable var = ctx.last_expr_result;
 
-          // Variable does not exist
-          if (left_side_var == null) {
-            throw new RuntimeException(String.format("variable %s has not be decelared before", left_side_var.GetVariableName()));
-          }
+          Operation add = new Add(AddType.Plus);
           
-          Operation op = new Add(AddType.Plus);
-
-          // The return does not matter since we dont care about the return of increment.
-          Variable _return_var = op.Execute(left_side_var, new IntVariable("+1"));
+          Variable one = new IntVariable("temp");
+          add.Execute(var, one);
 
           return ctx;
         }
@@ -209,18 +378,14 @@ public class TypeCheckerVisit {
         public Ctx visit(jlc.lib.javalette.Absyn.Decr p, Ctx ctx) {
           // This is same as add with one
           ctx.last_expr_result = null;
-          Variable left_side_var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable var = ctx.last_expr_result;
 
-          // Variable does not exist
-          if (left_side_var == null) {
-            throw new RuntimeException(String.format("variable %s has not be decelared before", left_side_var.GetVariableName()));
-          }
+          Operation min = new Add(AddType.Minus);
           
-          Operation op = new Add(AddType.Minus);
-
-          // The return does not matter since we dont care about the return of increment.
-          Variable _return_var = op.Execute(left_side_var, new IntVariable("-1"));
-
+          Variable one = new IntVariable("temp");
+          min.Execute(var, one);
+          
           return ctx;
         }
 
@@ -352,7 +517,7 @@ public class TypeCheckerVisit {
           ctx = p.expr_.accept(new ExprVisitor(), ctx);
           Variable exper_result = ctx.last_expr_result;
           if (!var.IsSameAs(exper_result)) {
-            throw new RuntimeException("reuslt of experions is incompatible with variable type");
+            throw new RuntimeException(String.format("Result of %s is incompatible with variable type: %s", exper_result, var));
           }
           exper_result.SetVariableName(p.ident_);
 
@@ -361,27 +526,8 @@ public class TypeCheckerVisit {
       }
     
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<Ctx, Ctx> {
-        public Ctx visit(jlc.lib.javalette.Absyn.Int p, Ctx ctx) {
-          ctx.last_expr_result = new IntVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Doub p, Ctx ctx) {
-          
-          ctx.last_expr_result = new DoubleVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Bool p, Ctx ctx) {
-          
-          ctx.last_expr_result = new BooleanVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Void p, Ctx ctx) {
-          
-          ctx.last_expr_result = new VoidVariable("last");
-          return ctx;
-        }
+        
         public Ctx visit(jlc.lib.javalette.Absyn.Fun p, Ctx ctx) {
-          
           // TODO: I dont have any idea what is this
           ctx = p.type_.accept(new TypeVisitor(), ctx);
           for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
@@ -389,20 +535,112 @@ public class TypeCheckerVisit {
           }
           return ctx;
         }
-      }
-    
-      public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<Ctx, Ctx> {
-        public Ctx visit(jlc.lib.javalette.Absyn.EVar p, Ctx ctx) {
-          Variable var = GetVariableFromCtxOrPreviousCtx(ctx, p.ident_);
-          if (var == null) {
-            throw new RuntimeException("variable " + p.ident_ + " has not been declared");
+        public Ctx visit(ArrType p, Ctx ctx) {
+          ctx.last_expr_result = null;
+          ctx = p.type_.accept(new TypeVisitor(), ctx);
+          Variable arrayType = ctx.last_expr_result;
+          if (!(arrayType instanceof Variable)) {
+            throw new RuntimeException("Array type should have a base type");
           }
-          
-          if (ctx.last_expr_result != null) {
-            throw new RuntimeException("last element exist!");
+          // Create a new array variable with the base type
+          Variable arrayVar = new ArrayVariable("tmp_array_variable", arrayType.GetVariableType());
+          arrayVar.SetVariableKind(arrayType.GetVariableKind());
+          ctx.last_expr_result = arrayVar;
+          return ctx;
+        }
+
+        public Ctx visit(jlc.lib.javalette.Absyn.TypeBase p, Ctx ctx) {
+          ctx = p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          return ctx;
+        }
+      }
+      public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<Ctx, Ctx> {        
+        public Ctx visit(Int p, Ctx ctx) {
+          ctx.last_expr_result = new IntVariable("last");
+          return ctx;
+        }
+        
+        public Ctx visit(Doub p, Ctx ctx) {
+          ctx.last_expr_result = new DoubleVariable("last");
+          return ctx;
+        }
+        
+        public Ctx visit(Bool p, Ctx ctx) {
+          ctx.last_expr_result = new BooleanVariable("last");
+          return ctx;
+        }
+        
+        public Ctx visit(Void p, Ctx ctx) {
+          ctx.last_expr_result = new VoidVariable("last");
+          return ctx;
+        }
+
+      }
+
+      public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<Ctx, Ctx> {
+        public Ctx visit(NewArr p, Ctx ctx) {
+
+          // Evaluate that the index is an integer
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException("Array index must be an integer");
+          }
+          ctx.last_expr_result = null;
+          // Evaluate the type of the array
+          ctx = p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          Variable baseTypeVar = ctx.last_expr_result;
+          if (!(baseTypeVar instanceof Variable)) {
+            throw new RuntimeException("Array type should have a base type");
+          }
+          // Create a new array variable with the base type
+          Variable arrayVar = new ArrayVariable("tmp_array_variable", baseTypeVar.GetVariableType());
+          ctx.last_expr_result = arrayVar;
+
+          return ctx;
+        }
+
+        public Ctx visit(ArrLen p, Ctx ctx) {
+
+          // Evaluate array variable
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable arrayVar = ctx.last_expr_result;
+          ctx.last_expr_result = null;
+
+          if (!(arrayVar instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("In ArrLen: Variable: %s is not an array", arrayVar));
+          }
+          // Check that identity is equal to string literal "length"
+          if (!(p.ident_ == "length")){
+            throw new RuntimeException(String.format("In ArrLen: Variable: %s is not length", p.ident_));
           }
 
-          ctx.last_expr_result = var;
+
+          // Set the return type of this expression to be integer
+          ctx.last_expr_result = new IntVariable("tmp_int_variable");
+
+          return ctx;
+        }
+        public Ctx visit(ArrIndex p, Ctx ctx) {
+          // Evaluate index
+          ctx.last_expr_result = null;
+          ctx = p.expr_2.accept(new ExprVisitor(), ctx);
+          Variable indexVar = ctx.last_expr_result;
+
+          if (!(indexVar instanceof IntVariable)) {
+            throw new RuntimeException("Array index must be an integer");
+          }
+
+          // Evaluate array variable
+          ctx.last_expr_result = null;
+          ctx = p.expr_1.accept(new ExprVisitor(), ctx);
+          Variable arrayVar = ctx.last_expr_result;
+
+          if (!(arrayVar instanceof ArrayVariable)) {
+            throw new RuntimeException(String.format("In ArrIndex: Variable: %s is not an array", arrayVar));
+          }
+
+          ctx.last_expr_result = arrayVar.GetArrayType();
           return ctx;
         }
 
@@ -602,6 +840,19 @@ public class TypeCheckerVisit {
           
           return ctx;
         }
+
+        public Ctx visit(EVar p, Ctx arg) {
+          // Get the variable from the ctx or previous ctx
+          Variable var = GetVariableFromCtxOrPreviousCtx(arg, p.ident_);
+          if (var == null) {
+            throw new RuntimeException(String.format("In EVar: variable %s has not be decelared before", p.ident_));
+          }
+
+          // Set the last expression result to be this variable
+          arg.last_expr_result = var;
+          return arg;
+        }
+
       }
     
       public class AddOpVisitor implements jlc.lib.javalette.Absyn.AddOp.Visitor<Ctx, Ctx> {

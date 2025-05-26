@@ -258,7 +258,6 @@ public class VisitSkel
     public R visit(jlc.lib.javalette.Absyn.ArrLen p, A arg)
     { /* Code for ArrLen goes here */
       p.expr_.accept(new ExprVisitor<R,A>(), arg);
-      //p.ident_;
       return null;
     }
     public R visit(jlc.lib.javalette.Absyn.NewArr p, A arg)

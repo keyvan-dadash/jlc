@@ -831,7 +831,7 @@ public class PrettyPrinter
        if (_i_ > 6) render(_L_PAREN);
        pp(_arrlen.expr_, 6);
        render(".");
-       pp(_arrlen.ident_, 0);
+       render("length");
        if (_i_ > 6) render(_R_PAREN);
     }
     else     if (foo instanceof jlc.lib.javalette.Absyn.NewArr)
@@ -1429,7 +1429,6 @@ public class PrettyPrinter
        render("(");
        render("ArrLen");
        sh(_arrlen.expr_);
-       sh(_arrlen.ident_);
        render(")");
     }
     if (foo instanceof jlc.lib.javalette.Absyn.NewArr)
