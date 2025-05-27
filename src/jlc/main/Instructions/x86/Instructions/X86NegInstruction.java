@@ -6,25 +6,18 @@ import jlc.main.Instructions.x86.Operand;
 /**
  * x86 NEG instruction: two’s-complement negate.
  * Syntax:    neg dest
- * Allowed on register or memory.
+ * Note: currently this class does not have any use.
  */
 public class X86NegInstruction implements Instruction {
     private Operand operand;
     private int numOfSpace;
 
-    /** Empty ctor; must call setOperand() before GenerateInstruction(). */
     public X86NegInstruction() {}
 
-    /**
-     * @param operand the register or memory location to negate
-     */
     public X86NegInstruction(Operand operand) {
         setOperand(operand);
     }
 
-    /**
-     * Set or reset the operand.
-     */
     public void setOperand(Operand operand) {
         this.operand = operand;
     }

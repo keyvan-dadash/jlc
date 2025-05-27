@@ -19,15 +19,12 @@ import jlc.main.Variables.VariableType;
 
 /**
  * Represents a three‐operand relational operation in the x86 IR:
- *   dest = (src1 rel src2)
- * where rel ∈ {LTH, LE, GTH, GE, EQU, NE}.
  *
  * Lowering typically becomes:
  *   cmp src1, src2
- *   set<cond> dest8
+ *   set<cond> dest8(8 bit reguster)
  *   movzx dest, dest8
  *
- * To support SETcc, we fix dest to EAX (using AL for the byte write).
  */
 public class RelIR implements IR {
     private final RelType type;
@@ -75,13 +72,11 @@ public class RelIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis la) {
-        // record uses of src1/src2
         if (Utils.isVirtualVariable(src1)) la.recordVar(src1);
         if (Utils.isVirtualVariable(src2)) la.recordVar(src2);
-        // record definition of dest
         if (Utils.isVirtualVariable(dest)) {
             la.recordVar(dest);
-            // pin dest to RAX so SETcc writes into AL and we zero-extend from there
+            // since we use setcc instructins we have to fix it on RAX. however, we use the lower 8 bit of it.
             la.setFixedRegister(dest, Register.RAX);
         }
         la.finishStep();
@@ -93,15 +88,12 @@ public class RelIR implements IR {
 
         codeGenHelper.spillCurrentStep(out);
 
-        // 1) Materialize src1/src2 into registers or scratch if spilled
         Operand op1 = codeGenHelper.ensureInRegister(src1, out);
         Operand op2 = codeGenHelper.ensureInRegister(src2, out);
 
-        // 2) cmp vs. ucomiss depending on type
         if (src1.GetVariableType() == VariableType.Double) {
-            // 32-bit “double” → unordered compare
             X86CmpFPInstruction cmpfp = new X86CmpFPInstruction(
-                /* isDouble = */ true,
+                true,
                 op1, op2
             );
             cmpfp.AddNumOfSpaceForPrefix(4);
@@ -112,19 +104,16 @@ public class RelIR implements IR {
             out.add(cmpi);
         }
 
-        // 3) SETcc into AL (low byte of RAX)
         Operand al = Operand.of(Register.AL);
         X86SetccInstruction setcc = new X86SetccInstruction(type, al);
         setcc.AddNumOfSpaceForPrefix(4);
         out.add(setcc);
 
-        // 4) Zero-extend AL into RAX via MOVZX
         Operand rax = Operand.of(Register.RAX);
         X86MovzxInstruction movzx = new X86MovzxInstruction(rax, al);
         movzx.AddNumOfSpaceForPrefix(4);
         out.add(movzx);
 
-        // 5) Advance the IR step
         codeGenHelper.finishStep();
         return out;
     }

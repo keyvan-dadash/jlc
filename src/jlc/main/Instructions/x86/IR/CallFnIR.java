@@ -16,6 +16,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Represents the whole calling operation in assembly
+ * 1. push caller saving register
+ * 2. sub rsp if needed for stack alignemnt
+ * 3. push args
+ * 4. call function
+ * 5. move result to rax
+ * 6. pop saller saved register
+ * 7. clean up rsp
+ *
+ */
 public class CallFnIR implements IR {
     private final Function function;
     private final List<Variable> args;
@@ -52,13 +63,12 @@ public class CallFnIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis la) {
-        // record argument uses
         for (Variable v : args) {
             if (Utils.isVirtualVariable(v)) {
                 la.recordVar(v);
             }
         }
-        // record result definition + fixed reg
+        
         if (result != null && Utils.isVirtualVariable(result)) {
             la.recordVar(result);
         }
@@ -81,12 +91,13 @@ public class CallFnIR implements IR {
         subAlign.AddNumOfSpaceForPrefix(4);
         out.add(subAlign);
 
-        // 1) Push / reserve each arg right-to-left, in original order
+        // push args
         for (int i = args.size() - 1; i >= 0; --i) {
             Variable v = args.get(i);
             // System.out.printf("Running push for func %s Arg: %s\n", helper.getCurrentFunc(), v.GetVariableName());
             VariableType vt = v.GetVariableType();
 
+            // Global string are need to be loaded with lea instruction before push
             if (Utils.isGlobalVariable(v) && v.GetVariableType() == VariableType.String) {
                 Register tmp = Register.gpScratch();
                 X86LeaInstruction lea = new X86LeaInstruction(
@@ -105,8 +116,10 @@ public class CallFnIR implements IR {
                 continue;
             }
 
+            // There is no way that we can push xmm registers
+            // thus we need to reduce rsp and move the content of that register to 
+            // [rsp]
             if (vt == VariableType.Double) {
-                // Reserve 8 bytes for this FP argument
                 X86SubImmediateInstruction sub =
                     new X86SubImmediateInstruction(
                         Operand.of(Register.RSP),
@@ -121,7 +134,7 @@ public class CallFnIR implements IR {
                 Operand src = helper.ensureInRegister(v, out);
                 Address addr = new Address(Register.RSP, 0);
                 X86MoveFPInstruction st = new X86MoveFPInstruction(
-                    /*isDouble=*/true,
+                    true,
                     Operand.of(addr),
                     src
                 );
@@ -129,7 +142,6 @@ public class CallFnIR implements IR {
                 out.add(st);
 
             } else {
-                // A normal 8-byte push for ints, booleans, pointers, etc.
                 Operand op = helper.ensureInRegister(v, out);
                 X86PushInstruction push = new X86PushInstruction(op);
                 push.AddNumOfSpaceForPrefix(4);
@@ -139,7 +151,7 @@ public class CallFnIR implements IR {
             }
         }
 
-        // 2) Align to 16 bytes if needed
+        // We have to make sure the stack is 16bit aligned
         int curSize = helper.getCurrentFuncStackSize();
         int aligned = Utils.alignTo16(curSize);
         // System.out.printf("%s %s %s\n", helper.getCurrentFunc(), aligned, curSize);
@@ -150,12 +162,11 @@ public class CallFnIR implements IR {
             totalBytes += pad;
         }
 
-        // 3) The CALL itself
         X86CallInstruction call = new X86CallInstruction(function.fn_name);
         call.AddNumOfSpaceForPrefix(4);
         out.add(call);
 
-        // 4) Clean up caller stack in one go
+        // first we should clean whole stack
         if (totalBytes > 0) {
             X86AddImmediateInstruction add =
                 new X86AddImmediateInstruction(
@@ -167,13 +178,13 @@ public class CallFnIR implements IR {
             helper.addToCurrentFuncStackSize(-totalBytes);
         }
 
-        // 5) Move result from RAX / XMM0 into `result`
+        // move result from RAX / XMM0 into result
         if (result != null) {
             if (result.GetVariableType() == VariableType.Double) {
                 Register dst = helper.getRegisterFor(result);
                 if (dst != null) {
                     X86MoveFPInstruction mv = new X86MoveFPInstruction(
-                        /*isDouble=*/true,
+                        true,
                         Operand.of(dst),
                         Operand.of(Register.XMM0)
                     );

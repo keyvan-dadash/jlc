@@ -2,9 +2,6 @@ package jlc.main.Instructions.x86.Instructions;
 
 import jlc.main.Instructions.Instruction;
 
-/**
- * Emits any raw assembler directive or label verbatim.
- */
 public class X86DirectiveInstruction implements Instruction {
     private final String text;
     private int numOfSpace;

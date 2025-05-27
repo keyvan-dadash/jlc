@@ -9,34 +9,18 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86LabelInstruction;
 
 /**
- * Represents a label in the x86 IR, marking a basic‐block entry:
- *     label:
- *
- * You can construct it with a label name or set it later.
+ * Represents a label in the x86 IR, marking a basic‐block entry.
+ * 
  */
 public class LabelIR implements IR {
     private String label;
 
-    /**
-     * Construct an uninitialized LabelIR.
-     * You must call setLabel(...) before calling GetIR().
-     */
     public LabelIR() {}
 
-    /**
-     * Construct a LabelIR with the given label name.
-     *
-     * @param label the name of the label (without the trailing colon)
-     */
     public LabelIR(String label) {
         this.label = label;
     }
 
-    /**
-     * Set or reset the label name.
-     *
-     * @param label the name of the label (without the trailing colon)
-     */
     public void setLabel(String label) {
         this.label = label;
     }
@@ -46,7 +30,7 @@ public class LabelIR implements IR {
         if (label == null || label.isEmpty()) {
             throw new IllegalStateException("LabelIR label not initialized");
         }
-        // Emit the label followed by a colon
+
         return String.format("%s:", label);
     }
 
@@ -62,9 +46,7 @@ public class LabelIR implements IR {
 
         codeGenHelper.spillCurrentStep(out);
 
-        // e.g. emits “label:”
         X86LabelInstruction lbl = new X86LabelInstruction(label);
-        // labels typically have no indent
         lbl.AddNumOfSpaceForPrefix(0);
         out.add(lbl);
 

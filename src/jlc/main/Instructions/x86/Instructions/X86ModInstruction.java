@@ -4,10 +4,9 @@ import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.x86.Operand;
 
 /**
- * x86 mod instruction (signed remainder): remainder of dest/src stored in dest.
+ * x86 mod instruction performs mod instructions.
  * 
  * Syntax (IR): mod dest, src
- * Illegal: dest must be a register.
  */
 public class X86ModInstruction implements Instruction {
     private Operand dest;
@@ -20,9 +19,6 @@ public class X86ModInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if dest is memory.
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory()) {
             throw new IllegalArgumentException("mod: destination must be a register");

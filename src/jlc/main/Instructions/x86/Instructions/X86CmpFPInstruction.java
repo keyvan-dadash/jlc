@@ -8,7 +8,6 @@ import jlc.main.Instructions.x86.Operand;
  *   ucomiss src1, src2   (single-precision)
  *   ucomisd src1, src2   (double-precision)
  *
- * dest must be an XMM register; src2 may be XMM or memory.
  */
 public class X86CmpFPInstruction implements Instruction {
     private final boolean isDouble;
@@ -16,21 +15,15 @@ public class X86CmpFPInstruction implements Instruction {
     private Operand src2;
     private int numOfSpace;
 
-    /** Construct for single-precision (ucomiss). */
     public X86CmpFPInstruction() {
         this.isDouble = false;
     }
 
-    /** Construct for given precision and operands. */
     public X86CmpFPInstruction(boolean isDouble, Operand src1, Operand src2) {
         this.isDouble = isDouble;
         setOperands(src1, src2);
     }
 
-    /**
-     * Set or reset the operands.
-     * @throws IllegalArgumentException if src1 is not a register or both are memory.
-     */
     public void setOperands(Operand src1, Operand src2) {
         if (!src1.isRegister()) {
             throw new IllegalArgumentException(

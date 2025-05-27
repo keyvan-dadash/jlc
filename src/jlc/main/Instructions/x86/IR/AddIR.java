@@ -25,44 +25,22 @@ import jlc.main.Operations.AddType;
  *    dest = src1 + src2    (if type == Plus)
  *    dest = src1 - src2    (if type == Minus)
  *
- * Can be constructed with just a type and later have its operands set.
  */
 public class AddIR implements IR {
-    private final AddType type;   // Plus or Minus
+    private final AddType type;
     private Variable dest;
     private Variable src1;
     private Variable src2;
 
-    /**
-     * Construct with only the operation type.
-     * You must call setOperands(...) before calling GetIR().
-     *
-     * @param type Plus for ADD, Minus for SUB
-     */
     public AddIR(AddType type) {
         this.type = type;
     }
 
-    /**
-     * Construct with type and operands.
-     *
-     * @param type  Plus for ADD, Minus for SUB
-     * @param dest  the variable that will receive the result
-     * @param src1  the first operand
-     * @param src2  the second operand
-     */
     public AddIR(AddType type, Variable dest, Variable src1, Variable src2) {
         this.type = type;
         setOperands(dest, src1, src2);
     }
 
-    /**
-     * Set or reset the operands for this instruction.
-     *
-     * @param dest  the variable that will receive the result
-     * @param src1  the first operand
-     * @param src2  the second operand
-     */
     public void setOperands(Variable dest, Variable src1, Variable src2) {
         this.dest = dest;
         this.src1 = src1;
@@ -80,7 +58,7 @@ public class AddIR implements IR {
             case Minus: opcode = "SUB"; break;
             default:    throw new IllegalArgumentException("Unsupported AddType: " + type);
         }
-        // Format: OPCODE dest, src1, src2
+
         return String.format("%s %s, %s, %s",
                 opcode,
                 dest.GetVariableName(),
@@ -90,7 +68,6 @@ public class AddIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // record uses of src1 and src2, and definition of dest
         if (src1 != null && Utils.isVirtualVariable(src1)) {
             livenessAnalysis.recordVar(src1);
         }
@@ -100,7 +77,7 @@ public class AddIR implements IR {
         if (dest != null&& Utils.isVirtualVariable(dest)) {
             livenessAnalysis.recordVar(dest);
         }
-        // advance to next instruction index
+
         livenessAnalysis.finishStep();
     }
 
@@ -110,11 +87,11 @@ public class AddIR implements IR {
 
         codeGenHelper.spillCurrentStep(out);
 
-        // 1) Load src1/src2 into regs or scratch
+        // load operands
         Operand op1 = codeGenHelper.ensureInRegister(src1, out);
         Operand op2 = codeGenHelper.ensureInRegister(src2, out);
 
-        // 2) Pick dest operand (real reg or appropriate scratch)
+        // load dest operand
         Register rd = codeGenHelper.getRegisterFor(dest);
         Operand opDest;
         if (rd != null) {
@@ -125,7 +102,7 @@ public class AddIR implements IR {
             opDest = Operand.of(Register.gpScratch());   // GP scratch
         }
 
-        // 3) If dest doesn’t already hold src1, move src1→dest with correct mov
+        // load based on the type
         if (rd == null || !rd.equals(codeGenHelper.getRegisterFor(src1))) {
             if (dest.GetVariableType() == VariableType.Double) {
                 X86MoveFPInstruction mv = new X86MoveFPInstruction(true, opDest, op1);
@@ -138,7 +115,7 @@ public class AddIR implements IR {
             }
         }
 
-        // 4) Do the add/sub, int vs fp
+        // add and or sub based on the type
         if (dest.GetVariableType() == VariableType.Double) {
             Instruction inst = (type == AddType.Plus)
             ? new X86AddFPInstruction(true, opDest, op2)
@@ -153,10 +130,9 @@ public class AddIR implements IR {
             out.add(inst);
         }
 
-        // 5) If dest was spilled, write it back to memory
+        // spill
         codeGenHelper.spillIfNeeded(dest, opDest, out);
 
-        // 6) Advance to the next IR step
         codeGenHelper.finishStep();
         return out;
     }

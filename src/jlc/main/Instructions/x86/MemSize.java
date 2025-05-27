@@ -1,5 +1,9 @@
 package jlc.main.Instructions.x86;
 
+/**
+ * Helper for getting right keyword for a certain size in the code generation phase.
+ *
+ */
 public enum MemSize {
     BYTE("BYTE"),
     DWORD("DWORD"),
@@ -9,7 +13,6 @@ public enum MemSize {
     MemSize(String asm) { this.asm = asm; }
     @Override public String toString() { return asm; }
 
-    /** Number of bits this size represents. */
     public int bitWidth() {
         switch (this) {
             case BYTE:  return 8;
@@ -19,16 +22,12 @@ public enum MemSize {
         }
     }
 
-    /** 
-     * Map a bit-width back to the corresponding MemSize.
-     * @throws IllegalArgumentException if bits is not 8, 32, or 64 
-     */
     public static MemSize fromBits(int bits) {
         switch (bits) {
             case 8:  return BYTE;
             case 32: return DWORD;
             case 64: return QWORD;
-            case 128: // XMM registers are 128-bit wide, but memory ops stay QWORD
+            case 128: // 128 bit should be QWORD since we cannot access memory of 128 bit
                 return QWORD;
             default: throw new IllegalArgumentException("No MemSize for bit width: " + bits);
         }

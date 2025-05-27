@@ -1,18 +1,13 @@
 package jlc.main.Instructions.x86;
 
 /**
- * Represents an x86 memory operand, either as:
- *   - base+offset ([rbp-4], etc.)
- *   - rip-relative ([rel foo])
- *   - raw ([foo+8])
- *
- * And with an optional PTR-size prefix (BYTE/DWORD/QWORD PTR).
+ * Represents an address in x86 arch.
  */
 public class Address {
-    private final Register base;      // null if raw-expression
-    private final int offset;         // only if base != null
-    private final String expression;  // non-null if raw or rip-label
-    private final MemSize size;       // size prefix
+    private final Register base;
+    private final int offset;
+    private final String expression;
+    private final MemSize size;
 
     // base+offset form:
     public Address(Register base, int offset, MemSize size) {

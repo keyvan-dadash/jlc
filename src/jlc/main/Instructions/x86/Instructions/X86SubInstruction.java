@@ -7,7 +7,6 @@ import jlc.main.Instructions.x86.Operand;
  * x86 sub instruction: dest = dest - src
  * 
  * Syntax: sub dest, src
- * Illegal: memory-to-memory.
  */
 public class X86SubInstruction implements Instruction {
     private Operand dest;
@@ -20,9 +19,6 @@ public class X86SubInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if both dest and src are memory.
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory() && src.isMemory()) {
             throw new IllegalArgumentException("sub: cannot subtract memory from memory");

@@ -1,5 +1,8 @@
 package jlc.main.Instructions.x86;
 
+/*
+ * Represents registers in x86 arch.
+ */
 public enum Register {
     // 64-bit GPs
     RAX("rax"), RBX("rbx"), RCX("rcx"), RDX("rdx"),
@@ -7,7 +10,7 @@ public enum Register {
     R8 ("r8" ), R9 ("r9" ), R10("r10"), R11("r11"),
     R12("r12"), R13("r13"), R14("r14"), R15("r15"),
 
-    // RIP for PC-relative
+    // RIP for realitive access
     RIP("rip"),
 
     // 32-bit aliases
@@ -16,19 +19,19 @@ public enum Register {
     R8D ("r8d" ), R9D ("r9d" ), R10D("r10d"), R11D("r11d"),
     R12D("r12d"), R13D("r13d"), R14D("r14d"), R15D("r15d"),
 
-    // 16-bit halves
+    // 16-bit aliases
     AX("ax"), BX("bx"), CX("cx"), DX("dx"),
     SI("si"), DI("di"), BP("bp"), SP("sp"),
     R8W("r8w"), R9W("r9w"), R10W("r10w"), R11W("r11w"),
     R12W("r12w"), R13W("r13w"), R14W("r14w"), R15W("r15w"),
 
-    // 8-bit low halves
+    // 8-bit low aliases
     AL("al"), BL("bl"), CL("cl"), DL("dl"),
     SIL("sil"), DIL("dil"), BPL("bpl"), SPL("spl"),
     R8B("r8b"), R9B("r9b"), R10B("r10b"), R11B("r11b"),
     R12B("r12b"), R13B("r13b"), R14B("r14b"), R15B("r15b"),
 
-    // 8-bit high halves
+    // 8-bit high aliases
     AH("ah"), BH("bh"), CH("ch"), DH("dh"),
 
     // XMM SSE regs
@@ -40,7 +43,6 @@ public enum Register {
     public String getName() { return name; }
     @Override public String toString() { return name; }
 
-    /** GP regs available for integer allocation (excludes RBP & RSP). */
     public static Register[] gpForAllocations() {
         return new Register[]{ 
             // RAX,
@@ -49,7 +51,6 @@ public enum Register {
         };
     }
 
-    /** XMM regs available for floating-point allocation. */
     public static Register[] xmmForAllocations() {
         return new Register[]{ 
             // XMM0, 
@@ -70,12 +71,6 @@ public enum Register {
     public static Register gpScratch()  { return R11;  }
     public static Register xmmScratch(){ return XMM7; }
 
-    /**
-     * Given a MemSize, pick the right sub- or super-register.
-     * QWORD  → 64-bit (this)
-     * DWORD  → 32-bit alias
-     * BYTE   → low-8-bit alias
-     */
     public Register forMemSize(MemSize size) {
         switch (size) {
             case QWORD:
@@ -89,9 +84,6 @@ public enum Register {
         }
     }
 
-    // === Helpers ===
-
-    // Take any alias and climb up to its 64-bit parent
     private static Register widenTo64(Register r) {
         switch (r) {
             case AL:   case AX:  case EAX:  case RAX:  return RAX;
@@ -115,7 +107,6 @@ public enum Register {
         }
     }
 
-    // 64-bit → 32-bit
     private static Register mapTo32(Register r64) {
         switch (r64) {
             case RAX:  return EAX;
@@ -139,7 +130,6 @@ public enum Register {
         }
     }
 
-    // 64-bit → 8-bit low half
     private static Register mapTo8(Register r64) {
         switch (r64) {
             case RAX:  return AL;
@@ -163,31 +153,26 @@ public enum Register {
         }
     }
 
-    /** Returns the bit-width of this register. */
     public int getWidth() {
         switch (this) {
-            // 8-bit
             case AL: case BL: case CL: case DL:
             case SIL: case DIL: case BPL: case SPL:
             case R8B: case R9B: case R10B: case R11B:
             case R12B: case R13B: case R14B: case R15B:
                 return 8;
 
-            // 16-bit
             case AX: case BX: case CX: case DX:
             case SI: case DI: case BP: case SP:
             case R8W: case R9W: case R10W: case R11W:
             case R12W: case R13W: case R14W: case R15W:
                 return 16;
 
-            // 32-bit
             case EAX: case EBX: case ECX: case EDX:
             case ESI: case EDI: case EBP: case ESP:
             case R8D: case R9D: case R10D: case R11D:
             case R12D: case R13D: case R14D: case R15D:
                 return 32;
 
-            // 64-bit
             case RAX: case RBX: case RCX: case RDX:
             case RSI: case RDI: case RBP: case RSP:
             case R8:  case R9:  case R10: case R11:
@@ -195,7 +180,6 @@ public enum Register {
             case RIP:
                 return 64;
 
-            // 128-bit
             case XMM0: case XMM1: case XMM2: case XMM3:
             case XMM4: case XMM5: case XMM6: case XMM7:
                 return 128;

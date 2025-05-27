@@ -5,34 +5,31 @@ import jlc.main.Instructions.x86.Operand;
 import jlc.main.Operations.RelType;
 
 /**
- * x86 SETcc instruction: set byte if condition holds.
- * dest must be a byte-addressable register (e.g. AL, BL, CL, DL).
+ * x86 SETcc instruction: set byte based on the condition.
+ * it only operates on the 8 bit registers.
  *
  * RelType → mnemonic:
- *   LTH  → setl
- *   LE   → setle
- *   GTH  → setg
- *   GE   → setge
- *   EQU  → sete
- *   NE   → setne
+ *   LTH: setl
+ *   LE: setle
+ *   GTH: setg
+ *   GE: setge
+ *   EQU: sete
+ *   NE: setne
  */
 public class X86SetccInstruction implements Instruction {
     private final RelType cond;
     private Operand dest;
     private int numOfSpace;
 
-    /** Construct with just the condition; must call setOperand() before GenerateInstruction(). */
     public X86SetccInstruction(RelType cond) {
         this.cond = cond;
     }
 
-    /** Construct with condition and destination operand. */
     public X86SetccInstruction(RelType cond, Operand dest) {
         this(cond);
         setOperand(dest);
     }
 
-    /** Destination must be a register (byte‐addressable). */
     public void setOperand(Operand dest) {
         if (!dest.isRegister()) {
             throw new IllegalArgumentException("set" + cond.name().toLowerCase() +

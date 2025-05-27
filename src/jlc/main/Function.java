@@ -60,6 +60,7 @@ public class Function {
     // func_local holds function's local variable.
     public List<Variable> func_local;
 
+    // temporary variable that resides in this function.
     public List<Variable> func_temps;
 
     // return_var shows what is the return type of the function.

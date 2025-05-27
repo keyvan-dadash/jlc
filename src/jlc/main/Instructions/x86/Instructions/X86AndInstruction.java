@@ -4,10 +4,8 @@ import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.x86.Operand;
 
 /**
- * x86 and instruction: dest = dest & src
- * 
- * Syntax: and dest, src
- * Illegal: memory-to-memory.
+ * x86 and instruction: 
+ * and dest, src
  */
 public class X86AndInstruction implements Instruction {
     private Operand dest;
@@ -20,12 +18,9 @@ public class X86AndInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if both dest and src are memory.
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory() && src.isMemory()) {
-            throw new IllegalArgumentException("and: cannot AND memory to memory");
+            throw new IllegalArgumentException("and: cannot and memory to memory");
         }
         this.dest = dest;
         this.src = src;

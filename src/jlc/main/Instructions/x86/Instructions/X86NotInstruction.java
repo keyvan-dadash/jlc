@@ -18,9 +18,6 @@ public class X86NotInstruction implements Instruction {
         setOperand(dest);
     }
 
-    /**
-     * @param dest the operand to bitwise negate
-     */
     public void setOperand(Operand dest) {
         this.dest = dest;
     }

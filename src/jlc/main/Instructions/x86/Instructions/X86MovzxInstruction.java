@@ -4,32 +4,21 @@ import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.x86.Operand;
 
 /**
- * x86 MOVZX instruction: zero-extend byte → register.
- *
+ * x86 movz instruction: move src to dest but with zero extended
+ * 
  * Syntax:    movzx dest, src
- *   - dest must be a register (16- or 32-bit)
- *   - src may be a register (8-bit) or memory
  */
 public class X86MovzxInstruction implements Instruction {
     private Operand dest;
     private Operand src;
     private int numOfSpace;
 
-    /** Empty ctor; must call setOperands() before GenerateInstruction(). */
     public X86MovzxInstruction() {}
 
-    /**
-     * @param dest destination register (16- or 32-bit)
-     * @param src  source operand (8-bit register or memory)
-     */
     public X86MovzxInstruction(Operand dest, Operand src) {
         setOperands(dest, src);
     }
 
-    /**
-     * Set or reset the operands.
-     * @throws IllegalArgumentException if dest is memory or both dest/src are memory
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory()) {
             throw new IllegalArgumentException("movzx: destination must be a register");

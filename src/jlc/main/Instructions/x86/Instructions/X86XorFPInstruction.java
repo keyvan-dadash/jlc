@@ -8,7 +8,6 @@ import jlc.main.Instructions.x86.Operand;
  *   xorps dest, src   (single-precision)
  *   xorpd dest, src   (double-precision)
  *
- * dest must be an XMM register; src may be XMM or memory.
  */
 public class X86XorFPInstruction implements Instruction {
     private final boolean isDouble;
@@ -25,9 +24,6 @@ public class X86XorFPInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if dest is not a register, or both operands are memory
-     */
     public void setOperands(Operand dest, Operand src) {
         if (!dest.isRegister()) {
             String mnem = isDouble ? "xorpd" : "xorps";

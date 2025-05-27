@@ -9,7 +9,7 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86GlobalInstruction;
 
 /**
- * Emit a “.globl <symbol>” directive.
+ * Outputs a “.globl <symbol>” directive.
  */
 public class GlobalIR implements IR {
     private final String symbol;
@@ -25,7 +25,7 @@ public class GlobalIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // no-op
+        return;
     }
 
     @Override

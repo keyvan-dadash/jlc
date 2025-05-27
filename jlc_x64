@@ -3,6 +3,6 @@
 # Prepend ../bin (resolved with pwd) to the existing CLASSPATH.
 export CLASSPATH=/home/sod/chalmers/TDA283/jlc/src/../bin:$CLASSPATH
 
-java jlc.main.Main
+java jlc.main.Main --x86
 # echo $CLASSPATH 1>&2
 

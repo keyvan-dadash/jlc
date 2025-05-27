@@ -20,8 +20,6 @@ import jlc.main.Instructions.x86.LinearScanAllocator.AllocationResult;
 
 /**
  * Helper for generating x86 code from IR, using the register allocation result.
- * Tracks a global instruction index (step) so we can query which physical register
- * a virtual variable occupies at each point in codegen.
  */
 public class CodeGenHelper {
     private final Map<Variable, List<AssignedInterval>> assignments;
@@ -35,9 +33,6 @@ public class CodeGenHelper {
     private Integer current_func_stack_size = 0;
     private int currentStep;
 
-    /**
-     * @param allocationResult the result of linear-scan allocation
-     */
     public CodeGenHelper(AllocationResult allocationResult, Map<Variable,Integer> spillSlots, Map<Integer,List<Variable>> spillsByStep) {
         this.assignments = allocationResult.map;
         this.spillSlots = spillSlots;
@@ -46,17 +41,10 @@ public class CodeGenHelper {
         this.spillsByStep = spillsByStep;
     }
 
-    /**
-     * Advance to the next instruction index. Call after emitting each IR instruction.
-     */
     public void finishStep() {
         currentStep++;
     }
 
-    /**
-     * Returns the physical register assigned to `var` at the current instruction step,
-     * or null if it is spilled at this point.
-     */
     public Register getRegisterFor(Variable var) {
         List<AssignedInterval> intervals = assignments.get(var);
         if (intervals == null) {
@@ -77,10 +65,6 @@ public class CodeGenHelper {
         return spillSlots;
     }
 
-    /**
-     * Ensure `v` is in a register.  If it’s already allocated, just return that reg,
-     * otherwise load it from its spill slot into the appropriate scratch and return that.
-     */
     public Operand ensureInRegister(Variable v, List<Instruction> out) {
         if (VariableKind.ConstantVariable == v.GetVariableKind()) {
             return Operand.ofImmediate(v);
@@ -92,6 +76,7 @@ public class CodeGenHelper {
         if (r != null) {
             return Operand.of(r);
         }
+
         // spilled: pick scratch
         if (v.GetVariableType() == VariableType.Double) {
             Register sx = Register.xmmScratch();
@@ -99,7 +84,7 @@ public class CodeGenHelper {
             Address addr = new Address(Register.RBP, -slot);
             // movsd xmmX, [rbp - slot]
             X86MoveFPInstruction ld = new X86MoveFPInstruction(
-                /* isDouble= */ true,
+                true,
                 Operand.of(sx), Operand.of(addr)
             );
             ld.AddNumOfSpaceForPrefix(4);
@@ -110,7 +95,7 @@ public class CodeGenHelper {
             Register sx = Register.gpScratch();
             int slot = spillSlots.get(v);
             Address addr = new Address(Register.RBP, -slot);
-            // mov r11, [rbp - slot]
+            // mov spillReg, [rbp - slot]
             X86MoveInstruction ld = new X86MoveInstruction(
                 Operand.of(sx), Operand.of(addr)
             );
@@ -120,10 +105,6 @@ public class CodeGenHelper {
         }
     }
 
-    /**
-     * If `dest` was spilled, store it back from `op` into its slot.
-     * No-op if dest lives in a reg.
-     */
     public void spillIfNeeded(Variable dest, Operand op, List<Instruction> out) {
         if (VariableKind.ConstantVariable == dest.GetVariableKind()) {
             return;
@@ -139,13 +120,13 @@ public class CodeGenHelper {
         if (dest.GetVariableType() == VariableType.Double) {
             // movsd [rbp - slot], xmmX
             X86MoveFPInstruction st = new X86MoveFPInstruction(
-                /* isDouble= */ true,
+                true,
                 Operand.of(addr), op
             );
             st.AddNumOfSpaceForPrefix(4);
             out.add(st);
         } else {
-            // mov [rbp - slot], r11
+            // mov [rbp - slot], spillReg
             X86MoveInstruction st = new X86MoveInstruction(
                 Operand.of(addr), op
             );
@@ -182,7 +163,7 @@ public class CodeGenHelper {
     public void recordFunctionRegisters(Function function) {
         String fn = function.fn_name;
         Set<Register> regs = new LinkedHashSet<>();
-        // look at each temp in this function
+        
         for (Variable v : function.func_temps) {
             List<AssignedInterval> intervals = assignments.get(v);
             if (intervals != null) {
@@ -217,10 +198,6 @@ public class CodeGenHelper {
         return live;
     }
 
-    /**
-     * Retrieve the set of physical registers used by the given function
-     * (as recorded by recordFunctionRegisters).
-     */
     public Set<Register> getFunctionRegisters(String functionName) {
         return funcRegisters.getOrDefault(functionName, Collections.emptySet());
     }

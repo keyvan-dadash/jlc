@@ -14,12 +14,8 @@ import jlc.main.Instructions.x86.Instructions.X86PushInstruction;
 import jlc.main.Instructions.x86.Instructions.X86SubImmediateInstruction;
 
 public final class RegisterSaver {
-    private RegisterSaver() { /* no instances */ }
+    private RegisterSaver() {}
 
-    /**
-     * Pushes (and records) all of `candidates ∩ toSave` onto the stack
-     * in a deterministic order; updates the helper’s stack size accordingly.
-     */
     public static void save(
             CodeGenHelper helper,
             List<Instruction> out,
@@ -33,7 +29,6 @@ public final class RegisterSaver {
 
         if (regs.size() == 0) return;
 
-        // pick the intersection and sort by ordinal
         X86DirectiveInstruction x86DirectiveInstruction = new X86DirectiveInstruction("; saving registers");
         x86DirectiveInstruction.AddNumOfSpaceForPrefix(4);
         out.add(x86DirectiveInstruction);
@@ -42,7 +37,6 @@ public final class RegisterSaver {
 
         for (Register r : regs) {
             if (r.name().startsWith("XMM")) {
-                // spill XMM register into an 8-byte slot on the stack
                 X86SubImmediateInstruction sub =
                     new X86SubImmediateInstruction(
                       Operand.of(Register.RSP), 8
@@ -53,7 +47,7 @@ public final class RegisterSaver {
     
                 // movss [rsp], xmmN
                 X86MoveFPInstruction st = new X86MoveFPInstruction(
-                    /* isDouble= */ true,
+                    true,
                     Operand.of(new Address(Register.RSP, 0)),
                     Operand.of(r)
                 );
@@ -61,7 +55,7 @@ public final class RegisterSaver {
                 out.add(st);
     
             } else {
-                // normal GP push
+                // normal GP reg push
                 X86PushInstruction push = new X86PushInstruction(Operand.of(r));
                 push.AddNumOfSpaceForPrefix(4);
                 out.add(push);
@@ -74,10 +68,6 @@ public final class RegisterSaver {
         out.add(x86DirectiveInstruction1);
     }
 
-    /**
-     * Pops the same registers (in reverse order) off the stack;
-     * updates the helper’s stack size accordingly.
-     */
     public static void restore(
             CodeGenHelper helper,
             List<Instruction> out,
@@ -99,7 +89,6 @@ public final class RegisterSaver {
 
         for (Register r : regs) {
             if (r.name().startsWith("XMM")) {
-                // reload into XMM, then deallocate that slot
                 // movss xmmN, [rsp]
                 X86MoveFPInstruction ld = new X86MoveFPInstruction(
                     /* isDouble= */ true,
@@ -119,7 +108,7 @@ public final class RegisterSaver {
                 helper.addToCurrentFuncStackSize(-8);
     
             } else {
-                // normal GP pop
+                // normal GP reg pop
                 X86PopInstruction pop = new X86PopInstruction(Operand.of(r));
                 pop.AddNumOfSpaceForPrefix(4);
                 out.add(pop);

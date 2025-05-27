@@ -3,7 +3,7 @@ package jlc.main.Instructions.x86.Instructions;
 import jlc.main.Instructions.Instruction;
 
 /**
- * A pseudo-instruction to switch assembler section.
+ * Produces different sections in the final assembly.
  *   section .text
  *   section .data
  *   section .rodata

@@ -4,12 +4,12 @@ import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableType;
 
 /**
- * Wraps a register, memory operand, or (extension point) an immediate.
+ * Wraps a register, memory operand, or an immediate.
  */
 public class Operand {
     private final Register reg;
     private final Address addr;
-    private final Variable immVar; // <-- you could add this later
+    private final Variable immVar;
     private final MemSize size;
 
     private Operand(Register reg, Address addr, Variable immVar, MemSize size) {
@@ -31,10 +31,9 @@ public class Operand {
 
     /**
      * Memory operand for a local/global Variable whose
-     * name is already “[ebp-4]” or similar.
+     * name is already “[ebp-4]” or similar from FuncDefIR.
      */
     public static Operand ofMemory(Variable v) {
-        // pick PTR size:
         MemSize size;
         switch (v.GetVariableType()) {
             case Boolean: size = MemSize.BYTE;  break;
@@ -46,8 +45,8 @@ public class Operand {
     }
 
     /**
-     * Memory operand for a global label “foo” via RIP-relative:
-     *   BYTE PTR [rel foo], DWORD PTR … etc.
+     * Memory operand for a global label “foo”. 
+     * Later it uses rel instruction.
      */
     public static Operand ofGlobal(String label, VariableType vt) {
         MemSize size;
@@ -60,7 +59,9 @@ public class Operand {
         return new Operand(null, new Address(Register.RIP, label, size), null, size);
     }
 
-    /** **New**: Immediate integer constant. */
+    /**
+     * Operand of immediate (constant) variables.
+     */
     public static Operand ofImmediate(Variable constVar) {
         return new Operand(null, null, constVar, Utils.memSizeForVariable(constVar));
     }
@@ -72,7 +73,6 @@ public class Operand {
     public String toString() {
         if (isRegister())   return reg.getName();
         if (isMemory())     return addr.toString();
-        // immediate
         return immVar.GetVariableName();
     }
 

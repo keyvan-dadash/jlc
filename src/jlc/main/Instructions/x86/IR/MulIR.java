@@ -27,8 +27,7 @@ import jlc.main.Instructions.x86.Instructions.X86MulInstruction;
  *   dest = src1 / src2    (Div)
  *   dest = src1 % src2    (Mod)
  *
- * Division and modulo on x86 require fixed registers: RAX (dividend) and
- * quotient in RAX or remainder in RDX.
+ * This IR has two fixed registers RAX and RDX
  */
 public class MulIR implements IR {
     private final MulType type;
@@ -57,11 +56,13 @@ public class MulIR implements IR {
         if (Utils.isVirtualVariable(src2)) la.recordVar(src2);
         if (Utils.isVirtualVariable(dest)) la.recordVar(dest);
 
-        // For integer DIV/MOD we pin src1→RAX, and dest→RAX/RDX
         if (dest.GetVariableType()==VariableType.Int &&
            (type==MulType.Div||type==MulType.Mod))
         {
+            // dividend should be in RAX
             la.setFixedRegister(src1, Register.RAX);
+
+            // divisor will be in RAX or mod will be in RDX
             la.setFixedRegister(dest, type==MulType.Div ? Register.RAX : Register.RDX);
         }
 
@@ -74,11 +75,9 @@ public class MulIR implements IR {
 
         helper.spillCurrentStep(out);
 
-        // 1) Materialize src1/src2 into operands
         Operand op1 = helper.ensureInRegister(src1, out);
         Operand op2 = helper.ensureInRegister(src2, out);
 
-        // 2) Pick a physical dest register (or scratch)
         Register rd = helper.getRegisterFor(dest);
         if (rd == null) {
             rd = dest.GetVariableType() == VariableType.Double
@@ -102,7 +101,6 @@ public class MulIR implements IR {
 
             case Div:
             case Mod:
-                // dividend → RAX
                 if (!op1.equals(Operand.of(Register.RAX))) {
                     X86MoveInstruction mvRax = new X86MoveInstruction(
                         Operand.of(Register.RAX), op1);
@@ -110,7 +108,6 @@ public class MulIR implements IR {
                     out.add(mvRax);
                 }
 
-                // ensure divisor is in a register (IDIV can't take immediates)
                 Operand idivOp = op2;
                 if (!idivOp.isRegister() || idivOp.getRegister().equals(Register.RDX)) {
                     Register tmp = Register.gpScratch();
@@ -121,17 +118,14 @@ public class MulIR implements IR {
                     idivOp = Operand.of(tmp);
                 }
 
-                // sign-extend RAX→RDX:RAX
                 X86CqoInstruction cqo = new X86CqoInstruction();
                 cqo.AddNumOfSpaceForPrefix(4);
                 out.add(cqo);
 
-                // perform the divide
                 X86DivInstruction idiv = new X86DivInstruction(idivOp);
                 idiv.AddNumOfSpaceForPrefix(4);
                 out.add(idiv);
 
-                // pick quotient or remainder
                 Register resultReg = (type == MulType.Div ? Register.RAX : Register.RDX);
                 if (rd != resultReg) {
                     X86MoveInstruction mvRes = new X86MoveInstruction(
@@ -143,33 +137,32 @@ public class MulIR implements IR {
             }
 
         } else {
-            // 32-bit “double” in SSE registers
             switch(type) {
             case Times:
-                // movsd dest, src1
+
                 X86MoveFPInstruction mvf = new X86MoveFPInstruction(
-                    /* isDouble= */ true, opDest, op1
+                    true, opDest, op1
                 );
                 mvf.AddNumOfSpaceForPrefix(4);
                 out.add(mvf);
-                // mulsd dest, src2
+
                 X86MulFPInstruction mfp = new X86MulFPInstruction(
-                    /* isDouble= */ true, opDest, op2
+                    true, opDest, op2
                 );
                 mfp.AddNumOfSpaceForPrefix(4);
                 out.add(mfp);
                 break;
     
             case Div:
-                // movsd dest, src1
+
                 X86MoveFPInstruction mvfd = new X86MoveFPInstruction(
-                    /* isDouble= */ true, opDest, op1
+                    true, opDest, op1
                 );
                 mvfd.AddNumOfSpaceForPrefix(4);
                 out.add(mvfd);
-                // divsd dest, src2
+
                 X86DivFPInstruction dfp = new X86DivFPInstruction(
-                    /* isDouble= */ true, opDest, op2
+                    true, opDest, op2
                 );
                 dfp.AddNumOfSpaceForPrefix(4);
                 out.add(dfp);
@@ -180,7 +173,6 @@ public class MulIR implements IR {
             }
         }
 
-        // spill back if needed
         helper.spillIfNeeded(dest, opDest, out);
 
         helper.finishStep();

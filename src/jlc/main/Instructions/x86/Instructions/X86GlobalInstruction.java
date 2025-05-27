@@ -2,8 +2,8 @@ package jlc.main.Instructions.x86.Instructions;
 
 import jlc.main.Instructions.Instruction;
 
-/**
- * Prints “.globl <symbol>” in the finalAsm.
+/**X86GlobalInstruction add global symbols
+ * Prints “.globl <symbol>”
  */
 public class X86GlobalInstruction implements Instruction {
     private final String symbol;

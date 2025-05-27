@@ -18,6 +18,13 @@ import jlc.main.Instructions.x86.IR.FuncDef;
 import jlc.main.Instructions.x86.IR.IR;
 import jlc.main.Variables.Variable;
 
+/*
+ * X86 code generator that constructs the whole pipline of:
+ * 1. Translating AST to IR.
+ * 2. Perform liveness analysis.
+ * 3. Perform register allocation.
+ * 4. Translate IR to x86 assembly codes.
+ */
 public class X86CodeGenerator {
     private final Ctx ctx;
     private final jlc.lib.javalette.Absyn.Prog parseTree;
@@ -31,35 +38,25 @@ public class X86CodeGenerator {
         this.outputFilename = outputFilename;
     }
 
-    /**
-     * @param dumpAsm   if true, prints out final assembly to stdout
-     * @param dumpIR    if true, prints the raw IR to stdout after generation
-     * @param dumpAlloc if true, prints the register‐allocation map to stdout
-     */
     public void GenerateCode(boolean dumpAsm,
                              boolean dumpIR,
                              boolean dumpAlloc) {
-        // 1) Emit IR
         IRCodeGenerator irGen = new IRCodeGenerator(ctx, parseTree);
         List<IR> irCodes = irGen.generateCode();
 
         if (dumpIR) printIR(irCodes);
 
-        // 2) Liveness
         LivenessAnalysis la = new LivenessAnalysis();
         for (IR ir : irCodes) ir.PerformLivenessAnalysis(la);
 
-        // 3) Linear-scan
         LinearScanAllocator allocator = new LinearScanAllocator();
         AllocationResult allocResult = allocator.allocate(la);
 
         if (dumpAlloc) printAllocationSorted(allocResult);
 
-        // 4) CodeGenHelper
         CodeGenHelper helper =
             new CodeGenHelper(allocResult, allocator.getSpillSlots(), allocator.getSpillsByStep());
 
-        // 5) Let each FuncDef pick up its per-function spill slots
         for (IR ir : irCodes) {
             if (ir instanceof FuncDef) {
                 ((FuncDef)ir).computeSpillVariables(
@@ -70,14 +67,12 @@ public class X86CodeGenerator {
             }
         }
 
-        // 6) Add your five built-in routines frame-sizes
         helper.getFuncArgSize().put("printString", 8);
         helper.getFuncArgSize().put("printInt",    8);
         helper.getFuncArgSize().put("printDouble", 8);
         helper.getFuncArgSize().put("readInt",     0);
         helper.getFuncArgSize().put("readDouble",  0);
 
-        // 7) Lower IR → x86 instructions
         StringBuilder asm = new StringBuilder();
         for (IR ir : irCodes) {
             List<Instruction> insns = ir.GenerateX86Code(helper);
@@ -86,14 +81,12 @@ public class X86CodeGenerator {
             }
         }
 
-        // 8) Write to disk
         try (BufferedWriter w = new BufferedWriter(new FileWriter(outputFilename))) {
             w.write(asm.toString());
         } catch (IOException e) {
             System.err.println("Error writing x86 to " + outputFilename + ": " + e.getMessage());
         }
 
-        // 9) Optionally dump
         if (dumpAsm) System.out.println(asm.toString());
     }
 

@@ -3,7 +3,8 @@ package jlc.main.Instructions.x86.Instructions;
 import jlc.main.Instructions.Instruction;
 
 /**
- * Prints “.extern <symbol>” in the finalAsm.
+ * X86ExternInstruction adds extern to the final assembly for accessing external functions.
+ * Prints “.extern <symbol>” .
  */
 public class X86ExternInstruction implements Instruction {
     private final String symbol;

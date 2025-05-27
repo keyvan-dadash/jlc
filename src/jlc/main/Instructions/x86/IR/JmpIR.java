@@ -9,22 +9,18 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86JmpInstruction;
 
 /**
- * Represents an unconditional jump in the x86 IR:
- *     JMP label
+ * Represents an unconditional jump in the x86 IR.
+ *
  */
 public class JmpIR implements IR {
     private final String label;
 
-    /**
-     * @param label the target label to jump to
-     */
     public JmpIR(String label) {
         this.label = label;
     }
 
     @Override
     public String GetIR() {
-        // Emits something like: JMP label
         return String.format("JMP %s", label);
     }
 
@@ -40,7 +36,6 @@ public class JmpIR implements IR {
 
         codeGenHelper.spillCurrentStep(out);
 
-        // emit “    jmp label”
         X86JmpInstruction jmp = new X86JmpInstruction(label);
         jmp.AddNumOfSpaceForPrefix(4);
         out.add(jmp);

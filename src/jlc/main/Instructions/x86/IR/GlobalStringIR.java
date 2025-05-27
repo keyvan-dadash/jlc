@@ -11,20 +11,11 @@ import jlc.main.Instructions.x86.Instructions.X86DirectiveInstruction;
 /**
  * Represents a global string in the x86 IR.
  *  
- * Generates a directive of the form:
- *   GLOBALSTR <label>, "<escaped-value>"
- * 
- * Later, your backend can turn this into:
- *   <label>: .asciz "<escaped-value>"
- */
+**/
 public class GlobalStringIR implements IR {
     private final String label;
     private final String value;
 
-    /**
-     * @param label the name of the global (no leading '@' or '_')
-     * @param value the string contents (without the null terminator)
-     */
     public GlobalStringIR(String label, String value) {
         this.label = label;
         this.value = value;
@@ -37,9 +28,6 @@ public class GlobalStringIR implements IR {
             escapeString(value));
     }
 
-    /**
-     * Escape backslashes and double quotes so the IR string literal is valid.
-     */
     private String escapeString(String s) {
         return s
             .replace("\\", "\\\\")
@@ -54,9 +42,7 @@ public class GlobalStringIR implements IR {
     @Override
     public List<Instruction> GenerateX86Code(CodeGenHelper helper) {
         List<Instruction> out = new ArrayList<>();
-        // label declaration
         out.add(new X86DirectiveInstruction(label + ":"));
-        // null-terminated string
         out.add(new X86DirectiveInstruction(
             String.format("    db \"%s\", 0", escapeString(value))
         ));

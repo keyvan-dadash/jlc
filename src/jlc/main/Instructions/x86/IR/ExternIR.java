@@ -9,7 +9,7 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86ExternInstruction;
 
 /**
- * Emit a “.extern <symbol>” directive.
+ * Outputs “.extern <symbol>” directive.
  */
 public class ExternIR implements IR {
     private final String symbol;
@@ -25,7 +25,7 @@ public class ExternIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // no-op
+        return;
     }
 
     @Override

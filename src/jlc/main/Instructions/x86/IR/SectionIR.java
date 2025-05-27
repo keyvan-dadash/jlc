@@ -9,7 +9,7 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86SectionInstruction;
 
 /**
- * Selects the current assembler section:
+ * Sets current section. For example:
  *   SECTION .text
  *   SECTION .data
  *   SECTION .rodata
@@ -17,9 +17,6 @@ import jlc.main.Instructions.x86.Instructions.X86SectionInstruction;
 public class SectionIR implements IR {
     private final String sectionName;
 
-    /**
-     * @param sectionName one of ".text", ".data", ".rodata", etc.
-     */
     public SectionIR(String sectionName) {
         this.sectionName = sectionName;
     }
@@ -31,12 +28,11 @@ public class SectionIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // no liveness to record
+        return;
     }
 
     @Override
     public List<Instruction> GenerateX86Code(CodeGenHelper helper) {
-        // emit a single section‐directive pseudo‐instruction
         return Collections.<Instruction>singletonList(
             new X86SectionInstruction(sectionName)
         );

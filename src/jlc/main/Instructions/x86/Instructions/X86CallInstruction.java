@@ -10,15 +10,12 @@ public class X86CallInstruction implements Instruction {
     private String function;
     private int numOfSpace;
 
-    /** Uninitialized; must call setFunction(...) before GenerateInstruction(). */
     public X86CallInstruction() {}
 
-    /** Construct a call to the given function name. */
     public X86CallInstruction(String function) {
         this.function = function;
     }
 
-    /** Set or change the target function name. */
     public void setFunction(String function) {
         this.function = function;
     }

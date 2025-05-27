@@ -4,10 +4,9 @@ import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.x86.Operand;
 
 /**
- * x86 add instruction: dest = dest + src
- * 
- * Syntax: add dest, src
- * Illegal: memory-to-memory.
+ * x86 add instruction: 
+ *  add dest, src
+ *
  */
 public class X86AddInstruction implements Instruction {
     private Operand dest;
@@ -20,9 +19,6 @@ public class X86AddInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if both dest and src are memory.
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory() && src.isMemory()) {
             throw new IllegalArgumentException("add: cannot add memory to memory");

@@ -11,15 +11,12 @@ public class X86PopInstruction implements Instruction {
     private Operand dest;
     private int numOfSpace;
 
-    /** Uninitialized; must call setOperand(...) before GenerateInstruction(). */
     public X86PopInstruction() {}
 
-    /** Construct a pop into the given operand (register or memory). */
     public X86PopInstruction(Operand dest) {
         this.dest = dest;
     }
 
-    /** Set or change the destination operand. */
     public void setOperand(Operand dest) {
         this.dest = dest;
     }

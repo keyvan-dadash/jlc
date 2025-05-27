@@ -7,7 +7,6 @@ import jlc.main.Instructions.x86.Operand;
  * x86 imul instruction: dest = dest * src
  * 
  * Syntax: imul dest, src
- * Illegal: dest must be a register.
  */
 public class X86MulInstruction implements Instruction {
     private Operand dest;
@@ -20,9 +19,6 @@ public class X86MulInstruction implements Instruction {
         setOperands(dest, src);
     }
 
-    /**
-     * @throws IllegalArgumentException if dest is memory.
-     */
     public void setOperands(Operand dest, Operand src) {
         if (dest.isMemory()) {
             throw new IllegalArgumentException("imul: destination must be a register");

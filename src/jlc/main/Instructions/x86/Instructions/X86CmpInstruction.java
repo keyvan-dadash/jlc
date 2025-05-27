@@ -6,7 +6,7 @@ import jlc.main.Instructions.x86.Operand;
 /**
  * x86 cmp instruction:
  *   cmp src1, src2
- * Illegal: memory-to-memory.
+ * 
  */
 public class X86CmpInstruction implements Instruction {
     private Operand src1;
@@ -19,9 +19,6 @@ public class X86CmpInstruction implements Instruction {
         setOperands(src1, src2);
     }
 
-    /**
-     * @throws IllegalArgumentException if both operands are memory.
-     */
     public void setOperands(Operand src1, Operand src2) {
         if (src1.isMemory() && src2.isMemory()) {
             throw new IllegalArgumentException("cmp: cannot compare memory to memory");

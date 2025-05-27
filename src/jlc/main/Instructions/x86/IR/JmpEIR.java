@@ -9,28 +9,18 @@ import jlc.main.Instructions.x86.LivenessAnalysis;
 import jlc.main.Instructions.x86.Instructions.X86JeInstruction;
 
 /**
- * Represents a conditional jump-if-equal in the x86 IR:
- *     JE label
- *
- * This should follow a CMP (or TEST) instruction and will jump to the
- * given label if the zero flag *is* set (i.e., the operands compared were equal).
+ * Represents a conditional jump-if-equal in the x86 IR.
+ * This will be mixed with test or cmp.
  */
 public class JmpEIR implements IR {
     private String label;
 
-    /** Uninitialized; you must call setLabel(...) before GetIR(). */
     public JmpEIR() {}
 
-    /**
-     * @param label the name of the label to jump to
-     */
     public JmpEIR(String label) {
         this.label = label;
     }
 
-    /**
-     * Set or reset the jump‐target label.
-     */
     public void setLabel(String label) {
         this.label = label;
     }
@@ -45,7 +35,6 @@ public class JmpEIR implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // no registers are used or defined here
         livenessAnalysis.finishStep();
     }
 
@@ -54,7 +43,7 @@ public class JmpEIR implements IR {
         List<Instruction> out = new ArrayList<>();
 
         codeGenHelper.spillCurrentStep(out);
-        
+
         X86JeInstruction je = new X86JeInstruction(label);
         je.AddNumOfSpaceForPrefix(4);
         out.add(je);

@@ -19,14 +19,16 @@ import jlc.main.Instructions.x86.Instructions.X86PushInstruction;
 import jlc.main.Instructions.x86.Instructions.X86SubImmediateInstruction;
 
 /**
- * Emits the IR for beginning a function definition, using your existing Function class.
- * Also computes stack offsets for parameters and locals and renames each Variable
- * to its stack-address string (e.g. “[ebp+8]” or “[ebp-4]”).
+ * Represents the whole function setup operation in assembly
+ * 1. push rbp
+ * 2. move rbp, rsp
+ * 3 calcule the size to subtract from rsp
+ * 4. save registers
  */
 public class FuncDef implements IR {
     private final Function func;
-    private int totalParamSize;  // in bytes
-    private int totalLocalSize;  // in bytes
+    private int totalParamSize;
+    private int totalLocalSize;
     private int totalSpillSize;
     private int frameSize;
     private final Map<Variable,Integer> funcSpillMap = new LinkedHashMap<>();
@@ -52,19 +54,16 @@ public class FuncDef implements IR {
 
     @Override
     public void PerformLivenessAnalysis(LivenessAnalysis livenessAnalysis) {
-        // no-op for function header
+        return;
     }
 
-    /**
-     * Compute and return a map from each parameter and local Variable
-     * to its stack Address.  Parameters at [ebp+8], [ebp+12], …;
-     * locals at [ebp-4], [ebp-8], …
-     * Rounds every slot up to 4 bytes so that booleans still get 4-byte slots.
-     */
+
+    // Here we replace local variable name with [rsp-offset] adrres and
+    // args from their temporary name (for example t1) to [rsp+offset]
     public Map<Variable,Address> computeVariableAddresses(boolean computeSpill) {
         Map<Variable,Address> addressMap = new LinkedHashMap<>();
 
-        // Parameters: start at +8
+        // start of the first arg
         int offset = 16;
         for (Variable v : func.func_args) {
             int rawBytes = Utils.bitsForVariable(v) / 8;
@@ -74,7 +73,7 @@ public class FuncDef implements IR {
         }
         totalParamSize = offset - 16;
 
-        // Locals: start at -4, downward
+        // locals
         int localOffset = 0;
         for (Variable v : func.func_local) {
             int rawBytes = Utils.bitsForVariable(v) / 8;
@@ -116,7 +115,6 @@ public class FuncDef implements IR {
         }
         totalSpillSize = spillOffsetBytes;
 
-        //    sub rsp, frameSize
         frameSize = totalLocalSize + totalSpillSize;
         frameSize = Utils.alignTo16(frameSize);
         funcFrameSizes.put(func.fn_name, frameSize);
@@ -141,12 +139,10 @@ public class FuncDef implements IR {
         codeGenHelper.setCurrentFunc(func.fn_name);
         codeGenHelper.recordFunctionRegisters(func);
 
-        // **Function label**
-        // You’ll need an X86LabelInstruction (or similar) that just emits “<fn_name>:”
+        // we should be label the function
         out.add(new X86LabelInstruction(func.fn_name));
 
-        // 3) Prologue
-        //    push rbp
+        // push rbp
         X86PushInstruction ebpInstruction = new X86PushInstruction(Operand.of(Register.RBP));
         ebpInstruction.AddNumOfSpaceForPrefix(4);
         out.add(ebpInstruction);
@@ -158,7 +154,7 @@ public class FuncDef implements IR {
             codeGenHelper.addToCurrentFuncStackSize(8 + 8);
         }
 
-        //    mov rbp, rsp
+        // mov rbp, rsp
         X86MoveInstruction x86MoveInstruction = new X86MoveInstruction(
             Operand.of(Register.RBP),
             Operand.of(Register.RSP)
@@ -167,6 +163,7 @@ public class FuncDef implements IR {
         out.add(x86MoveInstruction);
         
         if (frameSize > 0) {
+            // sub rsp, frameSize
             X86SubImmediateInstruction x86SubImmediateInstruction = new X86SubImmediateInstruction(
                 Operand.of(Register.RSP),
                 frameSize

@@ -1,14 +1,13 @@
 package jlc.main.Instructions.x86;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import jlc.main.Instructions.x86.LivenessAnalysis.VarInterval;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableType;
 
 /**
- * Linear-scan allocator with separate GP vs XMM active lists & pools.
+ * Linear-scan allocator with separate GP vs XMM active lists & pools for int and doubles.
  */
 public class LinearScanAllocator {
     private final Deque<Register> freeGP;
@@ -24,7 +23,7 @@ public class LinearScanAllocator {
     public static class AssignedInterval {
         public final Variable var;
         public final int start, end;
-        public final Register reg;  // null if spilled
+        public final Register reg;
         public AssignedInterval(Variable v,int s,int e,Register r){
             var=v; start=s; end=e; reg=r;
         }
@@ -46,7 +45,7 @@ public class LinearScanAllocator {
 
         while (!queue.isEmpty()) {
             VarInterval cur = queue.poll();
-            // 1) expire old from correct list
+            // expire old from correct list
             if (cur.getVariable().GetVariableType() == VariableType.Double) {
                 expireOld(cur, activeXMM, freeXMM, result);
             } else {
@@ -55,7 +54,7 @@ public class LinearScanAllocator {
 
             // System.out.printf("Going to assign to %s\n", cur.getVariable().GetVariableName());
 
-            // 2) fixed?
+            // is fixed?
             Optional<Register> fix = la.getFixedRegister(cur.getVariable());
             if (fix.isPresent()) {
                 // System.out.printf("fixed %s\n", cur.getVariable().GetVariableName());
@@ -71,7 +70,7 @@ public class LinearScanAllocator {
                 continue;
             }
 
-            // 3) choose pool/list
+            // choose pool/list based on the type of current variable
             boolean isFP = cur.getVariable().GetVariableType()==VariableType.Double;
             Deque<Register> freePool = isFP ? freeXMM : freeGP;
             // System.out.println(freePool.stream()
@@ -97,7 +96,7 @@ public class LinearScanAllocator {
                     // System.err.printf("Spilling %s\n", last.getVariable().GetVariableName());
                     continue;
                 }
-                // otherwise spill
+                // spill it since the last is shorter
                 spill(cur, result);
                 recordSpillSlot(cur.getVariable());
                 recordSpillStep(cur.getStart(), cur.getVariable());
@@ -151,7 +150,7 @@ public class LinearScanAllocator {
 
         List<AssignedInterval> recs = result.get(iv.getVariable());
         if (recs != null && !recs.isEmpty()) {
-            // last entry corresponds to this iv
+            // remove last entry because its gonna be splitted 
             recs.remove(recs.size() - 1);
         }
 
@@ -162,7 +161,7 @@ public class LinearScanAllocator {
             VarInterval head = new VarInterval(iv.getVariable(), s, sp);
             assign(head, r, active, result);
         }
-        // tail requeued
+        // tail requeued (the spillted part)
         VarInterval tail = new VarInterval(iv.getVariable(), sp, e);
         spill(tail, result);
         recordSpillSlot(tail.getVariable());
