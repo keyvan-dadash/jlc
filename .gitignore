@@ -2,6 +2,7 @@
 *.class
 
 lib/*bc
+lib/*.o
 
 final_executable
 
@@ -34,3 +35,11 @@ src/javalette/*.class
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+*.txt
+*.asm
+*.bc
+*.ll
+src/*.jl
+myprogram
+*.o
