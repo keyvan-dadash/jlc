@@ -7,11 +7,11 @@ public class Main {
             TypeChecker typeChecker = new TypeChecker();
             typeChecker.performTypeCheckOnFile(System.in);
 
-            // CodeGenerator codeGenerator = new CodeGenerator(
-            //     typeChecker.GetCtx(),
-            //     typeChecker.GetTree(),
-            //     "output.ll");
-            // codeGenerator.GenerateCode(true);
+            CodeGenerator codeGenerator = new CodeGenerator(
+                typeChecker.GetCtx(),
+                typeChecker.GetTree(),
+                "output.ll");
+            codeGenerator.GenerateCode(true);
         } catch(Exception e) {
             if (args.length > 0 && args[0].equals(new String("v"))) {
                 System.err.println(String.format("failed to compile the given input:\n%s", e.getMessage()));

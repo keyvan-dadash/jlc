@@ -38,6 +38,7 @@ import jlc.main.Instructions.LLVM.Utils;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.MulType;
 import jlc.main.Operations.RelType;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.IntVariable;
@@ -101,6 +102,8 @@ public class LLVMCodeGeneratorVisit {
 
             args.add(newArg);
             args_to_allocate.add(arg);
+            newArg.SetVariableKind(VariableKind.TempVariable);
+            arg.SetVariableKind(VariableKind.LocalVariable);
             ctx.ClearLastVariable();
           }
 
@@ -122,14 +125,15 @@ public class LLVMCodeGeneratorVisit {
                 args_to_allocate.get(i).GetVariableType()));
 
             // Now we add store instruction
-            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(args.get(i), args_to_allocate.get(i)));
+            Variable argVal = args.get(i);
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(argVal, args_to_allocate.get(i)));
 
             // we can put the arg in side the loaded variable since it is a register
-            ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), args.get(i));
+            ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), argVal);
 
             // Also we should put them in ctx vairables
             ctx.AddToCtxVariable(args_to_allocate.get(i));
-          }
+        }
 
           ctx = p.blk_.accept(new BlkVisitor(), ctx);
 
@@ -152,6 +156,7 @@ public class LLVMCodeGeneratorVisit {
           Variable arg = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           arg.SetVariableName(p.ident_);
+          arg.SetVariableKind(VariableKind.LocalVariable);
           ctx.SetLastVariable(arg);
           return ctx;
         }
@@ -200,8 +205,9 @@ public class LLVMCodeGeneratorVisit {
 
             // Put variables inside ctx
             ctx.AddToCtxVariable(typeVariable);
-
+            typeVariable.SetVariableKind(VariableKind.LocalVariable);
             ctx.ClearLastVariable();
+
             ctx.SetLastVariable(typeVariable.GetNewVariableSameType());
           }
 
@@ -214,6 +220,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Ass p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable resultVariable = ctx.GetLastVariable();
+          resultVariable = ctx.EnsureLoaded(resultVariable);
           ctx.ClearLastVariable();
 
           // We should store resultVariable to the local variable
@@ -227,72 +234,58 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Incr p, LLVMCodeGenCtx ctx) {
-          // Variable one = new IntVariable("1");
-          // one.SetVariableKind(VariableKind.ConstantVariable);
+          Variable one = new IntVariable("1");
+          one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // // We first need to check if there is any temp register that has this vairable inside it
-          // Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          // Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          // if (isTmpExist == null) {
-          //   // We need to load the variable
-          //   isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-          //   ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // Evaluate the expression to get the addressable location
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable localVar = ctx.GetLastVariable(); 
+          Variable loadedVar = ctx.EnsureLoaded(localVar);
+          ctx.ClearLastVariable();
 
-          //   // We store it as a vriable that has already loaded a local vriable
-          //   ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          // }
+        // Now loadedValue holds the value to decrement
+          Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loadedVar);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, loadedVar, one, result));
 
-          // // We have the isTmpExist as the temp register which loaded a local vriable
-          // Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          // ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp));
+          // Store back
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(result, localVar));
 
-          // // Now, we need to store it in the local val
-          // ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
-
-          // // Now remove old loaded tmp vairable
-          // ctx.UnloadVariable(localVar.GetVariableName());
-
-          // // Store the new loaded variable
-          // ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
+          // Invalidate loaded value
+          ctx.UnloadVariable(localVar.GetVariableName());
+          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), result);
 
           return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Decr p, LLVMCodeGenCtx ctx) {
-          // Variable one = new IntVariable("1");
-          // one.SetVariableKind(VariableKind.ConstantVariable);
+          Variable one = new IntVariable("1");
+          one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // // We first need to check if there is any temp register that has this vairable inside it
-          // Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          // Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          // if (isTmpExist == null) {
-          //   // We need to load the variable
-          //   isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-          //   ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // Evaluate the expression to get the addressable location
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable localVar = ctx.GetLastVariable(); 
+          Variable loadedVar = ctx.EnsureLoaded(localVar);
+          ctx.ClearLastVariable();
 
-          //   // We store it as a vriable that has already loaded a local vriable
-          //   ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          // }
+        // Now loadedValue holds the value to decrement
+          Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loadedVar);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, loadedVar, one, result));
 
-          // // We have the isTmpExist as the temp register which loaded a local vriable
-          // Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          // ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp));
+          // Store back
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(result, localVar));
 
-          // // Now, we need to store it in the local val
-          // ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
-
-          // // Now remove old loaded tmp vairable
-          // ctx.UnloadVariable(localVar.GetVariableName());
-
-          // // Store the new loaded variable
-          // ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
+          // Invalidate loaded value
+          ctx.UnloadVariable(localVar.GetVariableName());
+          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), result);
 
           return ctx;
         }
 
+
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Ret p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           ctx.instruction_of_ctx.add(new LLVMReturnInstruction(result));
@@ -316,6 +309,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
@@ -350,6 +344,7 @@ public class LLVMCodeGeneratorVisit {
           
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
@@ -409,6 +404,7 @@ public class LLVMCodeGeneratorVisit {
  
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // We should add the branching instruction after the expression results finished.
@@ -432,6 +428,8 @@ public class LLVMCodeGeneratorVisit {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.SExp p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
+          Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
           return ctx;
         }
@@ -474,6 +472,7 @@ public class LLVMCodeGeneratorVisit {
           Variable var = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
+          var.SetVariableKind(VariableKind.LocalVariable);
 
           // Lets renamed the variable
           var = ctx.GetRenamedVariable(var);
@@ -495,6 +494,7 @@ public class LLVMCodeGeneratorVisit {
           Variable var = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
+          var.SetVariableKind(VariableKind.LocalVariable);
 
           // Lets renamed the variable
           var = ctx.GetRenamedVariable(var);
@@ -505,6 +505,7 @@ public class LLVMCodeGeneratorVisit {
           // Now lets evaluate its init value
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           // Now, we need to load the result into the variable
@@ -518,6 +519,30 @@ public class LLVMCodeGeneratorVisit {
       }
     
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, LLVMCodeGenCtx ctx) {
+          // TODO: I dont have any idea what is this
+          p.type_.accept(new TypeVisitor(), ctx);
+          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
+            x.accept(new TypeVisitor(), ctx);
+          }
+          return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(TypeBase p, LLVMCodeGenCtx ctx) {
+          p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrType p, LLVMCodeGenCtx ctx) {
+          ctx = p.type_.accept(new TypeVisitor(), ctx);
+          Variable arrType = ctx.GetLastVariable();  
+          ctx.SetLastVariable(new ArrayVariable("last", arrType.GetVariableType()));
+          return ctx;
+        }
+      }
+      public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Int p, LLVMCodeGenCtx ctx) {
           ctx.SetLastVariable(new IntVariable("last"));
@@ -538,48 +563,14 @@ public class LLVMCodeGeneratorVisit {
           ctx.SetLastVariable(new VoidVariable("last"));
           return ctx;
         }
-
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, LLVMCodeGenCtx ctx) {
-          // TODO: I dont have any idea what is this
-          p.type_.accept(new TypeVisitor(), ctx);
-          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
-            x.accept(new TypeVisitor(), ctx);
-          }
-          return ctx;
-        }
-
-        @Override
-        public LLVMCodeGenCtx visit(TypeBase p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
-        }
-
-        @Override
-        public LLVMCodeGenCtx visit(ArrType p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
-        }
       }
-    
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         private boolean IsNewExper = true;
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EVar p, LLVMCodeGenCtx ctx) {
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          if (isTmpExist == null) {
-            // We need to load the variable
-            Variable localVar = ctx.GetVariableFromCtx(p.ident_);
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
-
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          }
-
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          ctx.SetLastVariable(isTmpExist);
-          return ctx;
+            Variable var = ctx.GetVariableFromCtx(p.ident_);
+            ctx.SetLastVariable(var);
+            return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ELitInt p, LLVMCodeGenCtx ctx) {
@@ -616,6 +607,7 @@ public class LLVMCodeGeneratorVisit {
           for (jlc.lib.javalette.Absyn.Expr x: p.listexpr_) {
             x.accept(new ExprVisitor(), ctx);
             Variable arg = ctx.GetLastVariable();
+            arg = ctx.EnsureLoaded(arg);
             ctx.ClearLastVariable();
             args.add(arg);
           }
@@ -658,6 +650,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Neg p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           // Lets get new temp variable
@@ -672,6 +665,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Not p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           // Lets get new temp variable
@@ -686,6 +680,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EMul p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.mulop_.accept(new MulOpVisitor(), ctx);
@@ -696,6 +691,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -712,6 +708,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EAdd p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.addop_.accept(new AddOpVisitor(), ctx);
@@ -722,6 +719,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -738,6 +736,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ERel p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.relop_.accept(new RelOpVisitor(), ctx);
@@ -748,6 +747,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -779,6 +779,7 @@ public class LLVMCodeGeneratorVisit {
           // Now we evaluate the first part of and
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           // Now lets see if the and is true so we can go to the second part
@@ -795,6 +796,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Lets write the and instruction of both var1 and var2
@@ -836,6 +838,7 @@ public class LLVMCodeGeneratorVisit {
           // Now we evaluate the first part of or
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           // Now lets see if the or is false so we can go to the second part
@@ -852,6 +855,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Lets write the or instruction of both var1 and var2

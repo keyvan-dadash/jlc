@@ -272,9 +272,6 @@ public class FnVisit {
         public Ctx visit(ForEach p, Ctx ctx) {
           // ForEach is a special case, we should process the type and the item
           p.type_.accept(new TypeVisitor(), ctx);
-          Variable last = ctx.last_expr_result;
-          last.SetVariableName(p.ident_);
-          ctx.last_expr_result = null;
           p.stmt_.accept(new StmtVisitor(), ctx);
           p.expr_.accept(new ExprVisitor(), ctx);
           return ctx;

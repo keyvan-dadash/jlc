@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Stack;
 
 import jlc.main.Instructions.Instruction;
+import jlc.main.Instructions.LLVM.LLVMLoadInstruction;
 import jlc.main.Variables.Variable;
+import jlc.main.Variables.VariableKind;
 
 public class LLVMCodeGenCtx {
 
@@ -106,6 +108,7 @@ public class LLVMCodeGenCtx {
     // GetNewTempVairableWithTheSameTypeOf returns a new unique temporary variable.
     public Variable GetNewTempVairableWithTheSameTypeOf(Variable var) {
         Variable tempVariable = var.GetNewVariableSameType();
+        tempVariable.SetVariableKind(VariableKind.TempVariable);
         tempVariable.SetVariableName("t" + String.valueOf(temp_variable_counter++));
         return tempVariable;
     }
@@ -198,6 +201,7 @@ public class LLVMCodeGenCtx {
     public Variable GetRenamedVariable(Variable var) {
         String renameVar = "var" + String.valueOf(rename_variable_counter) + "_" + var.GetVariableName();
         Variable renameVariable = var.GetNewVariableSameType();
+        renameVariable.SetVariableKind(VariableKind.LocalVariable);
         renameVariable.SetVariableName(renameVar);
         return renameVariable;
     }
@@ -265,7 +269,7 @@ public class LLVMCodeGenCtx {
         // First we should renamed name
         String renamedVar = mapped_varibles.get(loadedVariable);
         if (renamedVar == null) {
-            // This variable does not belong to use, so we need to load in our parents ctx.
+            // This variable does not belong to us, so we need to load in our parents ctx.
             if (parent != null) {
                 return parent.GetVariableIfLoaded(loadedVariable);
             }
@@ -330,4 +334,24 @@ public class LLVMCodeGenCtx {
         subCtx.parent = null;
         return subCtx;
     }
+
+    // EnsureLoaded will ensure that the variable is loaded into a temporary variable.
+    // If the variable is already loaded, it will return the loaded variable.
+    // If the variable is not loaded, it will create a new temporary variable, load the variable into it,
+    // and return the new temporary variable.
+    public Variable EnsureLoaded(Variable var) {
+        if (var.GetVariableKind() == VariableKind.LocalVariable) {
+            Variable loaded = this.GetVariableIfLoaded(var.GetVariableName());
+            if (loaded != null) {
+                return loaded;
+            }
+            loaded = this.GetNewTempVairableWithTheSameTypeOf(var);
+            this.instruction_of_ctx.add(new LLVMLoadInstruction(var, loaded));
+            this.AddVariabelAsLoaded(var.GetVariableName(), loaded);
+            return loaded;
+        }
+        // Already a value (temp, constant, etc.)
+        return var;
+    }
 }
+
