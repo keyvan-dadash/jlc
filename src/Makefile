@@ -150,6 +150,7 @@ RESOLVED_BIN_PATH := $(shell pwd)/../bin
 
 run:
 	@sed -i "4s|.*|export CLASSPATH=$(RESOLVED_BIN_PATH):\$$CLASSPATH|" ../jlc
+	@sed -i "4s|.*|export CLASSPATH=$(RESOLVED_BIN_PATH):\$$CLASSPATH|" ../jlc_x64
 
 .PHONY : absyn
 
