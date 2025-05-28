@@ -272,17 +272,18 @@ public class LLVMCodeGeneratorVisit {
           Variable loadedVar = ctx.EnsureLoaded(localVar);
           ctx.ClearLastVariable();
 
-        // Now loadedValue holds the value to decrement
+        //Now loadedValue holds the value to decrement
           Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loadedVar);
           ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, loadedVar, one, result));
 
           if(localVar.GetVariableKind() == VariableKind.LocalVariable){
             ctx.instruction_of_ctx.add(new LLVMStoreInstruction(result, localVar));
-                      // Invalidate loaded value
+
             ctx.UnloadVariable(localVar.GetVariableName());
 
             ctx.AddVariabelAsLoaded(localVar.GetVariableName(), result);
           }
+
           return ctx;
         }
 
@@ -305,9 +306,6 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Cond p, LLVMCodeGenCtx ctx) {
-          // We should create two label. One label is for taking the statement of if
-          // the other one is for not taking the statement, and also a jumping for the 
-          // statement inside the if.
           List<String> labels = ctx.GetNewLabelWithPrefix("if.statement", "if.end");
           String ifStLabel = labels.get(0);
           String ifEnd = labels.get(1);
@@ -392,9 +390,6 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.While p, LLVMCodeGenCtx ctx) {
-          // We should create three label. One label is for re-evaluting condition of while
-          // and the second one for taking the statment of while and the last one is for 
-          // end of the while.
           List<String> labels = ctx.GetNewLabelWithPrefix("while.cond", "while.st", "while.end");
           String whileCondLabel = labels.get(0);
           String whileStLabel = labels.get(1);
@@ -441,26 +436,26 @@ public class LLVMCodeGeneratorVisit {
 
       @Override
       public LLVMCodeGenCtx visit(ArrAss p, LLVMCodeGenCtx ctx) {
-          // 1. Evaluate the array variable (should yield an ArrayVariable)
+          // Evaluate the array variable (should yield an ArrayVariable)
           Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
           VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
 
-          // 2. Load the array pointer (i8*)
+          //Load the array pointer (i8*)
           Variable arrPtr = ctx.EnsureLoaded(arrVar);
 
-          // 3. Evaluate the index expression
+          // Evaluate the index expression
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable idxVar = ctx.GetLastVariable();
           idxVar = ctx.EnsureLoaded(idxVar);
           ctx.ClearLastVariable();
 
-          // 4. Evaluate the value to assign
+          // evaluate the value to assign
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable valueVar = ctx.GetLastVariable();
           valueVar = ctx.EnsureLoaded(valueVar);
           ctx.ClearLastVariable();
 
-          // 5. Bitcast the i8* to the correct element pointer type
+          // Bitcast the i8* to thecorrect element pointer type
           Variable elemPtrTypeVar;
           switch (elemType) {
               case Int:
@@ -485,13 +480,13 @@ public class LLVMCodeGeneratorVisit {
                   throw new RuntimeException("ArrAss: Unsupported element type");
           }
 
-          // 6. GEP to get the address of the element
+          // GEP to get the address of the element
           Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
           ctx.instruction_of_ctx.add(
               new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
           );
 
-          // 7. Store the value at that address
+          // Store the value at that address
           ctx.instruction_of_ctx.add(
               new LLVMStoreInstruction(valueVar, gepResult)
           );
@@ -501,25 +496,25 @@ public class LLVMCodeGeneratorVisit {
 
       @Override
       public LLVMCodeGenCtx visit(ArrAssExpr p, LLVMCodeGenCtx ctx) {
-          // 1. Evaluate the array expression (Expr6)
+          // Evaluate the array expression (Expr6)
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable arrVar = ctx.GetLastVariable();
           arrVar = ctx.EnsureLoaded(arrVar);
           ctx.ClearLastVariable();
 
-          // 2. Evaluate the index expression
+          //Evaluate the index expression
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable idxVar = ctx.GetLastVariable();
           idxVar = ctx.EnsureLoaded(idxVar);
           ctx.ClearLastVariable();
 
-          // 3. Evaluate the value to assign
+          // Evaluate the value to assign
           p.expr_3.accept(new ExprVisitor(), ctx);
           Variable valueVar = ctx.GetLastVariable();
           valueVar = ctx.EnsureLoaded(valueVar);
           ctx.ClearLastVariable();
 
-          // 4. Determine the element type (from the array variable)
+          // Determine the element type (from the array variable)
           VariableType elemType;
           if (arrVar instanceof ArrayVariable) {
               elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
@@ -528,7 +523,7 @@ public class LLVMCodeGeneratorVisit {
               throw new RuntimeException("ArrAssExpr: arrVar is not an ArrayVariable");
           }
 
-          // 5. Bitcast the i8* to the correct element pointer type
+          // Bitcast the i8* to the correct element pointer type
           Variable elemPtrTypeVar;
           switch (elemType) {
               case Int:
@@ -553,13 +548,13 @@ public class LLVMCodeGeneratorVisit {
                   throw new RuntimeException("ArrAssExpr: Unsupported element type");
           }
 
-          // 6. GEP to get the address of the element
+          // GEP to get the address of the element
           Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
           ctx.instruction_of_ctx.add(
               new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
           );
 
-          // 7. Store the value at that address
+          // Store the value at that address
           ctx.instruction_of_ctx.add(
               new LLVMStoreInstruction(valueVar, gepResult)
           );
@@ -569,13 +564,13 @@ public class LLVMCodeGeneratorVisit {
 
         @Override
         public LLVMCodeGenCtx visit(ForEach p, LLVMCodeGenCtx ctx) {
-            // 1. Evaluate the array expression
+            // Evaluate the array expression
             p.expr_.accept(new ExprVisitor(), ctx);
             Variable arrVar = ctx.GetLastVariable();
             arrVar = ctx.EnsureLoaded(arrVar);
             ctx.ClearLastVariable();
 
-            // 2. Get the element type
+            // Get the element type
             VariableType elemType;
             if (arrVar instanceof ArrayVariable) {
                 elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
@@ -583,30 +578,30 @@ public class LLVMCodeGeneratorVisit {
                 throw new RuntimeException("ForEach: arrVar is not an ArrayVariable");
             }
 
-            // 3. Get array length
+            // Get array length
             Variable lenVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
             ctx.instruction_of_ctx.add(
                 new LLVMFuncCallIntruction("array_length", lenVar, arrVar)
             );
 
-            // 4. Allocate and initialize loop index
+            // Allocate and initialize loop index
             Variable idxVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
             ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(idxVar, VariableType.Int));
             Variable zero = new IntVariable("0");
             zero.SetVariableKind(VariableKind.ConstantVariable);
             ctx.instruction_of_ctx.add(new LLVMStoreInstruction(zero, idxVar));
 
-            // 5. Create labels
+            // Create labels
             List<String> labels = ctx.GetNewLabelWithPrefix("foreach.cond", "foreach.body", "foreach.inc", "foreach.end");
             String condLabel = labels.get(0);
             String bodyLabel = labels.get(1);
             String incLabel = labels.get(2);
             String endLabel = labels.get(3);
 
-            // 6. Jump to condition
+            // Jump to condition
             ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condLabel));
 
-            // 7. Condition block
+            // Condition block
             ctx.instruction_of_ctx.add(new LLVMLabelInstruction(condLabel));
             Variable idxLoaded = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
             ctx.instruction_of_ctx.add(new LLVMLoadInstruction(idxVar, idxLoaded));
@@ -614,7 +609,7 @@ public class LLVMCodeGeneratorVisit {
             ctx.instruction_of_ctx.add(new LLVMRelInstruction(RelType.LTH, idxLoaded, lenVar, condVar));
             ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condVar, bodyLabel, endLabel));
 
-            // 8. Body block
+            // Body block
             ctx.instruction_of_ctx.add(new LLVMLabelInstruction(bodyLabel));
             // Bitcast arrVar to element pointer type
             Variable elemPtrTypeVar;
@@ -659,7 +654,7 @@ public class LLVMCodeGeneratorVisit {
             // Emit the body
             p.stmt_.accept(new StmtVisitor(), ctx);
 
-            // 9. Increment block
+            // Increment block
             ctx.instruction_of_ctx.add(new LLVMJmpInstruction(incLabel));
             ctx.instruction_of_ctx.add(new LLVMLabelInstruction(incLabel));
             Variable idxInc = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
@@ -669,7 +664,7 @@ public class LLVMCodeGeneratorVisit {
             ctx.instruction_of_ctx.add(new LLVMStoreInstruction(idxInc, idxVar));
             ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condLabel));
 
-            // 10. End block
+            // End block
             ctx.instruction_of_ctx.add(new LLVMLabelInstruction(endLabel));
 
             return ctx;
@@ -677,20 +672,20 @@ public class LLVMCodeGeneratorVisit {
 
         @Override
         public LLVMCodeGenCtx visit(ArrIncr p, LLVMCodeGenCtx ctx) {
-            // 1. Get the array variable and its element type
+            // Get the array variable and its element type
             Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
             VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
 
-            // 2. Load the array pointer (i8*)
+            // Load the array pointer (i8*)
             Variable arrPtr = ctx.EnsureLoaded(arrVar);
 
-            // 3. Evaluate the index expression
+            // Evaluate the index expression
             p.expr_.accept(new ExprVisitor(), ctx);
             Variable idxVar = ctx.GetLastVariable();
             idxVar = ctx.EnsureLoaded(idxVar);
             ctx.ClearLastVariable();
 
-            // 4. Bitcast to the correct element pointer type
+            // Bitcast to the correct element pointer type
             Variable elemPtrTypeVar;
             switch (elemType) {
                 case Int:
@@ -715,13 +710,13 @@ public class LLVMCodeGeneratorVisit {
                     throw new RuntimeException("ArrDecr: Unsupported element type");
             }
 
-            // 5. GEP to get the address of the element
+            // GEP to get the address of the element
             Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
             ctx.instruction_of_ctx.add(
                 new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
             );
 
-            // 6. Load the current value
+            // Load the current value
             Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
                 elemType == VariableType.Int ? new IntVariable("") :
                 elemType == VariableType.Double ? new DoubleVariable("") :
@@ -731,7 +726,7 @@ public class LLVMCodeGeneratorVisit {
                 new LLVMLoadInstruction(gepResult, loaded)
             );
 
-            // 7. Subtract 1 (or 1.0 for double)
+            //  Subtract 1 (or 1.0 for double)
             Variable one = elemType == VariableType.Double
                 ? new DoubleVariable("1.0")
                 : new IntVariable("1");
@@ -742,7 +737,7 @@ public class LLVMCodeGeneratorVisit {
                 new LLVMAddInstruction(AddType.Plus, loaded, one, result)
             );
 
-            // 8. Store the result back
+            // Store the result back
             ctx.instruction_of_ctx.add(
                 new LLVMStoreInstruction(result, gepResult)
             );
@@ -752,20 +747,20 @@ public class LLVMCodeGeneratorVisit {
 
         @Override
         public LLVMCodeGenCtx visit(ArrDecr p, LLVMCodeGenCtx ctx) {
-            // 1. Get the array variable and its element type
+            // Get the array variable and its element type
             Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
             VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
 
-            // 2. Load the array pointer (i8*)
+            //  Load the array pointer (i8*)
             Variable arrPtr = ctx.EnsureLoaded(arrVar);
 
-            // 3. Evaluate the index expression
+            // Evaluate the index expression
             p.expr_.accept(new ExprVisitor(), ctx);
             Variable idxVar = ctx.GetLastVariable();
             idxVar = ctx.EnsureLoaded(idxVar);
             ctx.ClearLastVariable();
 
-            // 4. Bitcast to the correct element pointer type
+            //Bitcast to the correct element pointer type
             Variable elemPtrTypeVar;
             switch (elemType) {
                 case Int:
@@ -790,13 +785,13 @@ public class LLVMCodeGeneratorVisit {
                     throw new RuntimeException("ArrDecr: Unsupported element type");
             }
 
-            // 5. GEP to get the address of the element
+            // GEP to get the address of the element
             Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
             ctx.instruction_of_ctx.add(
                 new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
             );
 
-            // 6. Load the current value
+            // Load the current value
             Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
                 elemType == VariableType.Int ? new IntVariable("") :
                 elemType == VariableType.Double ? new DoubleVariable("") :
@@ -806,7 +801,7 @@ public class LLVMCodeGeneratorVisit {
                 new LLVMLoadInstruction(gepResult, loaded)
             );
 
-            // 7. Subtract 1 (or 1.0 for double)
+            // Subtract 1 (or 1.0 for double)
             Variable one = elemType == VariableType.Double
                 ? new DoubleVariable("1.0")
                 : new IntVariable("1");
@@ -817,7 +812,7 @@ public class LLVMCodeGeneratorVisit {
                 new LLVMAddInstruction(AddType.Minus, loaded, one, result)
             );
 
-            // 8. Store the result back
+            // Store the result back
             ctx.instruction_of_ctx.add(
                 new LLVMStoreInstruction(result, gepResult)
             );
@@ -1261,19 +1256,19 @@ public class LLVMCodeGeneratorVisit {
 
         @Override
         public LLVMCodeGenCtx visit(ArrIndex p, LLVMCodeGenCtx ctx) {
-            // 1. Evaluate the array expression (should yield an i8* pointer)
+            // Evaluate the array expression (should yield an i8* pointer)
             p.expr_1.accept(new ExprVisitor(), ctx);
             Variable arrPtr = ctx.GetLastVariable();
             arrPtr = ctx.EnsureLoaded(arrPtr);
             ctx.ClearLastVariable();
 
-            // 2. Evaluate the index expression
+            // Evaluate the index expression
             p.expr_2.accept(new ExprVisitor(), ctx);
             Variable idxVar = ctx.GetLastVariable();
             idxVar = ctx.EnsureLoaded(idxVar);
             ctx.ClearLastVariable();
 
-            // 3. Determine the element type (from the ArrayVariable)
+            //Determine the element type (from the ArrayVariable)
             VariableType elemType;
             if (arrPtr instanceof ArrayVariable) {
                 elemType = ((ArrayVariable) arrPtr).GetArrayType().GetVariableType();
@@ -1282,7 +1277,7 @@ public class LLVMCodeGeneratorVisit {
                 throw new RuntimeException("ArrIndex: arrPtr is not an ArrayVariable");
             }
 
-            // 4. Bitcast the i8* to the correct element pointer type
+            //Bitcast the i8* to the correct element pointer type
             Variable elemPtrTypeVar;
             switch (elemType) {
                 case Int:
@@ -1307,13 +1302,13 @@ public class LLVMCodeGeneratorVisit {
                     throw new RuntimeException("ArrIndex: Unsupported element type");
             }
 
-            // 5. GEP to get the address of the element
+            //GEP to get the address of the element
             Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
             ctx.instruction_of_ctx.add(
                 new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
             );
 
-            // 6. Load the value at that address
+            //Load the value at that address
             Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
                 elemType == VariableType.Int ? new IntVariable("") :
                 elemType == VariableType.Double ? new DoubleVariable("") :
@@ -1324,7 +1319,7 @@ public class LLVMCodeGeneratorVisit {
                 new jlc.main.Instructions.LLVM.LLVMLoadInstruction(gepResult, loaded)
             );
 
-            // 7. Set the result as the last variable
+            // Set the result as the last variable
             ctx.SetLastVariable(loaded);
             return ctx;
         }
