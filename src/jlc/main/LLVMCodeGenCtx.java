@@ -8,8 +8,10 @@ import java.util.Stack;
 
 import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.LLVM.LLVMLoadInstruction;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.VariableKind;
+import jlc.main.Variables.VariableType;
 
 public class LLVMCodeGenCtx {
 
@@ -119,6 +121,13 @@ public class LLVMCodeGenCtx {
         Variable tempVariable = var.GetNewVariableSameType();
         tempVariable.SetVariableKind(VariableKind.TempVariable);
         tempVariable.SetVariableName("t" + String.valueOf(temp_variable_counter++));
+        if(tempVariable.GetVariableType() == VariableType.Array) {
+
+            // If the variable is an array, we need to set the array type.
+            ArrayVariable arrayVar = (ArrayVariable) tempVariable;
+            arrayVar.SetArrayType(var.GetArrayType().GetVariableType());
+            tempVariable = arrayVar;
+        }
         return tempVariable;
     }
 
@@ -212,6 +221,12 @@ public class LLVMCodeGenCtx {
         Variable renameVariable = var.GetNewVariableSameType();
         renameVariable.SetVariableKind(VariableKind.LocalVariable);
         renameVariable.SetVariableName(renameVar);
+        if(var.GetVariableType() == VariableType.Array) {
+            // If the variable is an array, we need to set the array type.
+            ArrayVariable arrayVar = (ArrayVariable) renameVariable;
+            arrayVar.SetArrayType(var.GetArrayType().GetVariableType());
+            renameVariable = arrayVar;
+        }
         return renameVariable;
     }
 
@@ -371,7 +386,7 @@ public class LLVMCodeGenCtx {
         }
         return ptr;
     }
-    
+
     // SetArrayPtr will set the pointer to the array with the given name.
     public void SetArrayPtr(String arrayName, String ptr) {
         if (array_ptr.containsKey(arrayName)) {

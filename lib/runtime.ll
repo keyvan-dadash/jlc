@@ -6,7 +6,7 @@
 declare i32 @printf(i8*, ...)
 declare i32 @scanf(i8*, ...)
 declare i32 @puts(i8*)
-declare i8* @malloc(i64)
+declare i8* @calloc(i64, i64)
 
 ; =====================
 ; Printing Functions
@@ -57,34 +57,32 @@ define i8* @alloc_array_i32(i32 %len) {
 entry:
   %t0 = add i32 %len, 1
   %t1 = zext i32 %t0 to i64
-  %t2 = mul i64 %t1, 4
-  %t3 = call i8* @malloc(i64 %t2)
-  %t4 = bitcast i8* %t3 to i32*
-  store i32 %len, i32* %t4
-  %t5 = getelementptr inbounds i32, i32* %t4, i32 1
-  %t6 = bitcast i32* %t5 to i8*
-  ret i8* %t6
+  ; allocate %t1 elements of 4 bytes each, initialized to 0
+  %t2 = call i8* @calloc(i64 %t1, i64 4)
+  %t3 = bitcast i8* %t2 to i32*
+  store i32 %len, i32* %t3
+  %t4 = getelementptr inbounds i32, i32* %t3, i32 1
+  %t5 = bitcast i32* %t4 to i8*
+  ret i8* %t5
 }
 
-; Allocate byte array: i8[] (char/bool)
 define i8* @alloc_array_i8(i32 %len) {
 entry:
-  %len64 = zext i32 %len to i64
-  %total_data = add i64 %len64, 4
-  %mem = call i8* @malloc(i64 %total_data)
+  %total_bytes = add i32 %len, 4
+  %total_bytes64 = zext i32 %total_bytes to i64
+  %mem = call i8* @calloc(i64 %total_bytes64, i64 1)
   %header_ptr = bitcast i8* %mem to i32*
   store i32 %len, i32* %header_ptr
   %data_ptr = getelementptr i8, i8* %mem, i64 4
   ret i8* %data_ptr
 }
 
-; Allocate double array: double[]
 define i8* @alloc_array_double(i32 %len) {
 entry:
   %len_plus_1 = add i32 %len, 1
   %len_plus_1_64 = zext i32 %len_plus_1 to i64
-  %total_bytes = mul i64 %len_plus_1_64, 8
-  %mem = call i8* @malloc(i64 %total_bytes)
+  ; each double is 8 bytes
+  %mem = call i8* @calloc(i64 %len_plus_1_64, i64 8)
   %header_ptr = bitcast i8* %mem to i32*
   store i32 %len, i32* %header_ptr
   %double_ptr = bitcast i8* %mem to double*

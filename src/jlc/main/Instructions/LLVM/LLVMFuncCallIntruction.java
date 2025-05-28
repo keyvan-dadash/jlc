@@ -49,29 +49,19 @@ public class LLVMFuncCallIntruction implements Instruction {
 
     @Override
     public String GenerateInstruction() {
-
-        if(fn != null) {
-            if(!return_var.IsSameAs(new VoidVariable(""))){
-                // Return of the function is void, so we dont need to assign it to anything.
-                return String.format("%scall void @%s(%s)",
-                    Utils.GetNumOfSpace(this.numOfSpace),
-                    fn.fn_name,
-                    generateArgsStr());
-            }
-            return String.format("%s%s = call %s @%s(%s)",
+        String fnName = (fn != null) ? fn.fn_name : globalFn;
+        if(return_var.IsSameAs(new VoidVariable(""))){
+            // Return of the function is void, so we dont need to assign it to anything.
+            return String.format("%scall void @%s(%s)",
                 Utils.GetNumOfSpace(this.numOfSpace),
-                Utils.VariableToLLVMVariable(return_var),
-                Utils.VariableTypeToLLVMVariableType(return_var.GetVariableType()),
-                fn.fn_name,
+                fnName,
                 generateArgsStr());
         }
-        
-        // If the function is not defined in the current context, we assume it's a global function.
         return String.format("%s%s = call %s @%s(%s)",
             Utils.GetNumOfSpace(this.numOfSpace),
             Utils.VariableToLLVMVariable(return_var),
             Utils.VariableTypeToLLVMVariableType(return_var.GetVariableType()),
-            globalFn,
+            fnName,
             generateArgsStr());
 }
 

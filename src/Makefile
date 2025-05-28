@@ -67,6 +67,8 @@ test : absyn \
 	jlc/main/Instructions/LLVM/LLVMLoadGlobalStringInstruction.class \
 	jlc/main/Instructions/LLVM/LLVMPhiInstruction.class \
 	jlc/main/Instructions/LLVM/LLVMSelectInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMGetElementPtrInstruction.class \
+	jlc/main/Instructions/LLVM/LLVMBitcastInstruction.class \
 	jlc/main/LLVMCodeGenCtx.class \
 	jlc/main/LLVMCodeGeneratorVisit.class \
 	jlc/main/Instructions/LLVM/Utils.class
