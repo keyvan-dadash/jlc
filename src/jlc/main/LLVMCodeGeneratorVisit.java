@@ -473,7 +473,7 @@ public class LLVMCodeGeneratorVisit {
               case Boolean:
                   elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
                   ctx.instruction_of_ctx.add(
-                      new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                      new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i1*")
                   );
                   break;
               default:
@@ -541,7 +541,7 @@ public class LLVMCodeGeneratorVisit {
               case Boolean:
                   elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
                   ctx.instruction_of_ctx.add(
-                      new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i8*")
+                      new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i1*")
                   );
                   break;
               default:
@@ -624,7 +624,7 @@ public class LLVMCodeGeneratorVisit {
                     break;
                 case Boolean:
                     elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
-                    ctx.instruction_of_ctx.add(new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i8*"));
+                    ctx.instruction_of_ctx.add(new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i1*"));
                     break;
                 default:
                     throw new RuntimeException("ForEach: Unsupported element type");
@@ -703,7 +703,7 @@ public class LLVMCodeGeneratorVisit {
                 case Boolean:
                     elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
                     ctx.instruction_of_ctx.add(
-                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i1*")
                     );
                     break;
                 default:
@@ -778,7 +778,7 @@ public class LLVMCodeGeneratorVisit {
                 case Boolean:
                     elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
                     ctx.instruction_of_ctx.add(
-                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i1*")
                     );
                     break;
                 default:
@@ -843,7 +843,7 @@ public class LLVMCodeGeneratorVisit {
             switch (arrType.GetVariableType()) {
                 case Int:     allocFunc = "alloc_array_i32"; break;
                 case Double:  allocFunc = "alloc_array_double"; break;
-                case Boolean: allocFunc = "alloc_array_i8"; break;
+                case Boolean: allocFunc = "alloc_array_i1"; break;
                 default: 
                     throw new RuntimeException("Unsupported array type: ");
             }
@@ -1295,7 +1295,7 @@ public class LLVMCodeGeneratorVisit {
                 case Boolean:
                     elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
                     ctx.instruction_of_ctx.add(
-                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i1*")
                     );
                     break;
                 default:
@@ -1368,7 +1368,7 @@ public class LLVMCodeGeneratorVisit {
           switch (arrType) {
               case Int:     allocFunc = "alloc_array_i32"; break;
               case Double:  allocFunc = "alloc_array_double"; break;
-              case Boolean: allocFunc = "alloc_array_i8"; break;
+              case Boolean: allocFunc = "alloc_array_i1"; break;
               default: 
                   throw new RuntimeException("Unsupported array type: " + arrType);
           }

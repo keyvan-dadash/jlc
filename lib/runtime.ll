@@ -66,15 +66,24 @@ entry:
   ret i8* %t5
 }
 
-define i8* @alloc_array_i8(i32 %len) {
+define i1* @alloc_array_i1(i32 %len) {
 entry:
+  ; Allocate (len + 4) bytes: 4 for header, len for data
   %total_bytes = add i32 %len, 4
   %total_bytes64 = zext i32 %total_bytes to i64
   %mem = call i8* @calloc(i64 %total_bytes64, i64 1)
+
+  ; Store the length in the first 4 bytes
   %header_ptr = bitcast i8* %mem to i32*
   store i32 %len, i32* %header_ptr
+
+  ; Compute the data pointer (i8* at offset 4)
   %data_ptr = getelementptr i8, i8* %mem, i64 4
-  ret i8* %data_ptr
+
+  ; Cast to i1* so it looks like a boolean array
+  %bool_ptr = bitcast i8* %data_ptr to i1*
+
+  ret i1* %bool_ptr
 }
 
 define i8* @alloc_array_double(i32 %len) {

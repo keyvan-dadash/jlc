@@ -359,10 +359,7 @@ public class LLVMCodeGenCtx {
         return subCtx;
     }
 
-    // EnsureLoaded will ensure that the variable is loaded into a temporary variable.
-    // If the variable is already loaded, it will return the loaded variable.
-    // If the variable is not loaded, it will create a new temporary variable, load the variable into it,
-    // and return the new temporary variable.
+
     public Variable EnsureLoaded(Variable var) {
         if (var.GetVariableKind() == VariableKind.LocalVariable) {
             Variable loaded = this.GetVariableIfLoaded(var.GetVariableName());
