@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Prepend ../bin (resolved with pwd) to the existing CLASSPATH.
-export CLASSPATH=/home/sod/chalmers/TDA283/jlc/src/../bin:$CLASSPATH
+export CLASSPATH=/home/chrisdator/compilerconstruction/jlc/src/../bin:$CLASSPATH
 
 java jlc.main.Main
 # echo $CLASSPATH 1>&2

@@ -7,7 +7,11 @@ import java.util.Map;
 import java.util.Stack;
 
 import jlc.main.Instructions.Instruction;
+import jlc.main.Instructions.LLVM.LLVMLoadInstruction;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.Variable;
+import jlc.main.Variables.VariableKind;
+import jlc.main.Variables.VariableType;
 
 public class LLVMCodeGenCtx {
 
@@ -66,6 +70,14 @@ public class LLVMCodeGenCtx {
     // content.
     public Map<String, String> global_strings;
 
+    // array_ptr holds the pointer to the array that we have allocated.
+    // This is needed because we need to keep the pointer to the array
+    // in order to access the elements of the array.
+    // Note: this is a map of array name to the pointer to the array.
+    // For example, if we have an array named arr, we will have a pointer
+    // to the array in this map with the key "arr".
+    public Map<String, String> array_ptr;
+
     // parent shows what is the parent of ctx. This is need 
     // because sometimes we generate a new ctx but still we need
     // to search for variables and these stuff in our parents.
@@ -89,6 +101,7 @@ public class LLVMCodeGenCtx {
         loaded_variables = new HashMap<>();
         mapped_varibles = new HashMap<>();
         global_strings = new HashMap<>();
+        array_ptr = new HashMap<>();
         last_incompelete_instruction = null;
         last_variable = null;
         parent = null;
@@ -106,7 +119,15 @@ public class LLVMCodeGenCtx {
     // GetNewTempVairableWithTheSameTypeOf returns a new unique temporary variable.
     public Variable GetNewTempVairableWithTheSameTypeOf(Variable var) {
         Variable tempVariable = var.GetNewVariableSameType();
+        tempVariable.SetVariableKind(VariableKind.TempVariable);
         tempVariable.SetVariableName("t" + String.valueOf(temp_variable_counter++));
+        if(tempVariable.GetVariableType() == VariableType.Array) {
+
+            // If the variable is an array, we need to set the array type.
+            ArrayVariable arrayVar = (ArrayVariable) tempVariable;
+            arrayVar.SetArrayType(var.GetArrayType().GetVariableType());
+            tempVariable = arrayVar;
+        }
         return tempVariable;
     }
 
@@ -198,7 +219,14 @@ public class LLVMCodeGenCtx {
     public Variable GetRenamedVariable(Variable var) {
         String renameVar = "var" + String.valueOf(rename_variable_counter) + "_" + var.GetVariableName();
         Variable renameVariable = var.GetNewVariableSameType();
+        renameVariable.SetVariableKind(VariableKind.LocalVariable);
         renameVariable.SetVariableName(renameVar);
+        if(var.GetVariableType() == VariableType.Array) {
+            // If the variable is an array, we need to set the array type.
+            ArrayVariable arrayVar = (ArrayVariable) renameVariable;
+            arrayVar.SetArrayType(var.GetArrayType().GetVariableType());
+            renameVariable = arrayVar;
+        }
         return renameVariable;
     }
 
@@ -265,7 +293,7 @@ public class LLVMCodeGenCtx {
         // First we should renamed name
         String renamedVar = mapped_varibles.get(loadedVariable);
         if (renamedVar == null) {
-            // This variable does not belong to use, so we need to load in our parents ctx.
+            // This variable does not belong to us, so we need to load in our parents ctx.
             if (parent != null) {
                 return parent.GetVariableIfLoaded(loadedVariable);
             }
@@ -330,4 +358,41 @@ public class LLVMCodeGenCtx {
         subCtx.parent = null;
         return subCtx;
     }
+
+    // EnsureLoaded will ensure that the variable is loaded into a temporary variable.
+    // If the variable is already loaded, it will return the loaded variable.
+    // If the variable is not loaded, it will create a new temporary variable, load the variable into it,
+    // and return the new temporary variable.
+    public Variable EnsureLoaded(Variable var) {
+        if (var.GetVariableKind() == VariableKind.LocalVariable) {
+            Variable loaded = this.GetVariableIfLoaded(var.GetVariableName());
+            if (loaded != null) {
+                return loaded;
+            }
+            loaded = this.GetNewTempVairableWithTheSameTypeOf(var);
+            this.instruction_of_ctx.add(new LLVMLoadInstruction(var, loaded));
+            this.AddVariabelAsLoaded(var.GetVariableName(), loaded);
+            return loaded;
+        }
+        // Already a value (temp, constant, etc.)
+        return var;
+    }
+
+    // GetArrayPtr will return the pointer to the array with the given name.
+    public String GetArrayPtr(String arrayName) {
+        String ptr = array_ptr.get(arrayName);
+        if (ptr == null) {
+            throw new RuntimeException(String.format("array %s does not exist", arrayName));
+        }
+        return ptr;
+    }
+
+    // SetArrayPtr will set the pointer to the array with the given name.
+    public void SetArrayPtr(String arrayName, String ptr) {
+        if (array_ptr.containsKey(arrayName)) {
+            throw new RuntimeException(String.format("array %s already exists", arrayName));
+        }
+        array_ptr.put(arrayName, ptr);
+    }
 }
+

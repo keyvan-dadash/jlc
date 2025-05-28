@@ -92,11 +92,12 @@ terminal _SYMB_30;    //   false
 terminal _SYMB_31;    //   for
 terminal _SYMB_32;    //   if
 terminal _SYMB_33;    //   int
-terminal _SYMB_34;    //   new
-terminal _SYMB_35;    //   return
-terminal _SYMB_36;    //   true
-terminal _SYMB_37;    //   void
-terminal _SYMB_38;    //   while
+terminal _SYMB_34;    //   length
+terminal _SYMB_35;    //   new
+terminal _SYMB_36;    //   return
+terminal _SYMB_37;    //   true
+terminal _SYMB_38;    //   void
+terminal _SYMB_39;    //   while
 
 terminal String _STRING_;
 
@@ -138,11 +139,11 @@ Stmt ::= _SYMB_5:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Empty(); :}
   | _IDENT_:p_1 _SYMB_7:p_2 Expr:p_3 _SYMB_8:p_4 _SYMB_11:p_5 _SYMB_5:p_6  {: RESULT = new jlc.lib.javalette.Absyn.ArrDecr(p_1,p_3); :}
   | Expr:p_1 _SYMB_10:p_2 _SYMB_5:p_3  {: RESULT = new jlc.lib.javalette.Absyn.Incr(p_1); :}
   | Expr:p_1 _SYMB_11:p_2 _SYMB_5:p_3  {: RESULT = new jlc.lib.javalette.Absyn.Decr(p_1); :}
-  | _SYMB_35:p_1 Expr:p_2 _SYMB_5:p_3  {: RESULT = new jlc.lib.javalette.Absyn.Ret(p_2); :}
-  | _SYMB_35:p_1 _SYMB_5:p_2  {: RESULT = new jlc.lib.javalette.Absyn.VRet(); :}
+  | _SYMB_36:p_1 Expr:p_2 _SYMB_5:p_3  {: RESULT = new jlc.lib.javalette.Absyn.Ret(p_2); :}
+  | _SYMB_36:p_1 _SYMB_5:p_2  {: RESULT = new jlc.lib.javalette.Absyn.VRet(); :}
   | _SYMB_32:p_1 _SYMB_0:p_2 Expr:p_3 _SYMB_1:p_4 Stmt:p_5  {: RESULT = new jlc.lib.javalette.Absyn.Cond(p_3,p_5); :}
   | _SYMB_32:p_1 _SYMB_0:p_2 Expr:p_3 _SYMB_1:p_4 Stmt:p_5 _SYMB_29:p_6 Stmt:p_7  {: RESULT = new jlc.lib.javalette.Absyn.CondElse(p_3,p_5,p_7); :}
-  | _SYMB_38:p_1 _SYMB_0:p_2 Expr:p_3 _SYMB_1:p_4 Stmt:p_5  {: RESULT = new jlc.lib.javalette.Absyn.While(p_3,p_5); :}
+  | _SYMB_39:p_1 _SYMB_0:p_2 Expr:p_3 _SYMB_1:p_4 Stmt:p_5  {: RESULT = new jlc.lib.javalette.Absyn.While(p_3,p_5); :}
   | Expr:p_1 _SYMB_5:p_2  {: RESULT = new jlc.lib.javalette.Absyn.SExp(p_1); :}
 ;
 Item ::= _IDENT_:p_1  {: RESULT = new jlc.lib.javalette.Absyn.NoInit(p_1); :}
@@ -154,7 +155,7 @@ ListItem ::= Item:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ListItem(); RESUL
 BaseType ::= _SYMB_33:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Int(); :}
   | _SYMB_28:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Doub(); :}
   | _SYMB_27:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Bool(); :}
-  | _SYMB_37:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Void(); :}
+  | _SYMB_38:p_1  {: RESULT = new jlc.lib.javalette.Absyn.Void(); :}
 ;
 Type ::= BaseType:p_1  {: RESULT = new jlc.lib.javalette.Absyn.TypeBase(p_1); :}
   | Type:p_1 _SYMB_7:p_2 _SYMB_8:p_3  {: RESULT = new jlc.lib.javalette.Absyn.ArrType(p_1); :}
@@ -166,13 +167,13 @@ ListType ::=  /* empty */  {: RESULT = new jlc.lib.javalette.Absyn.ListType(); :
 Expr6 ::= _IDENT_:p_1  {: RESULT = new jlc.lib.javalette.Absyn.EVar(p_1); :}
   | _INTEGER_:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ELitInt(p_1); :}
   | _DOUBLE_:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ELitDoub(p_1); :}
-  | _SYMB_36:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ELitTrue(); :}
+  | _SYMB_37:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ELitTrue(); :}
   | _SYMB_30:p_1  {: RESULT = new jlc.lib.javalette.Absyn.ELitFalse(); :}
   | _IDENT_:p_1 _SYMB_0:p_2 ListExpr:p_3 _SYMB_1:p_4  {: RESULT = new jlc.lib.javalette.Absyn.EApp(p_1,p_3); :}
   | _STRING_:p_1  {: RESULT = new jlc.lib.javalette.Absyn.EString(p_1); :}
   | Expr6:p_1 _SYMB_7:p_2 Expr:p_3 _SYMB_8:p_4  {: RESULT = new jlc.lib.javalette.Absyn.ArrIndex(p_1,p_3); :}
-  | Expr6:p_1 _SYMB_12:p_2 _IDENT_:p_3  {: RESULT = new jlc.lib.javalette.Absyn.ArrLen(p_1,p_3); :}
-  | _SYMB_34:p_1 BaseType:p_2 _SYMB_7:p_3 Expr:p_4 _SYMB_8:p_5  {: RESULT = new jlc.lib.javalette.Absyn.NewArr(p_2,p_4); :}
+  | Expr6:p_1 _SYMB_12:p_2 _SYMB_34:p_3  {: RESULT = new jlc.lib.javalette.Absyn.ArrLen(p_1); :}
+  | _SYMB_35:p_1 BaseType:p_2 _SYMB_7:p_3 Expr:p_4 _SYMB_8:p_5  {: RESULT = new jlc.lib.javalette.Absyn.NewArr(p_2,p_4); :}
   | _SYMB_0:p_1 Expr:p_2 _SYMB_1:p_3  {: RESULT = p_2; :}
 ;
 Expr5 ::= _SYMB_13:p_1 Expr6:p_2  {: RESULT = new jlc.lib.javalette.Absyn.Neg(p_2); :}

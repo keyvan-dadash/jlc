@@ -46,11 +46,21 @@ public class VoidVariable implements Variable {
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.Void;
+        if (var == null) return false;
+            if (var instanceof ArrayVariable) {
+                return ((ArrayVariable) var).GetArrayType().GetVariableType() == VariableType.Void;
+            }
+        return var.GetVariableType() == VariableType.Void;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
         return new VoidVariable("last", VariableKind.Unkown);
+    }
+
+    @Override
+    public Variable GetArrayType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'GetArrayType'");
     }
 }

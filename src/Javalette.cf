@@ -1,3 +1,4 @@
+
 -- programs ------------------------------------------------
 
 entrypoints Prog ;
@@ -26,8 +27,16 @@ Init.      Item ::= Ident "=" Expr ;
 separator nonempty Item "," ;
 
 Ass.       Stmt ::= Ident "=" Expr  ";" ;
-Incr.      Stmt ::= Ident "++"  ";" ;
-Decr.      Stmt ::= Ident "--"  ";" ;
+
+ArrAss.    Stmt ::= Ident "[" Expr "]" "=" Expr ";" ;
+ArrAssExpr. Stmt ::= Expr6 "[" Expr "]" "=" Expr ";" ;
+ForEach.   Stmt ::= "for" "(" Type Ident ":" Expr ")" Stmt ;
+
+ArrIncr.   Stmt ::= Ident "[" Expr "]" "++" ";" ;
+ArrDecr.   Stmt ::= Ident "[" Expr "]" "--" ";" ;
+
+Incr.      Stmt ::= Expr "++"  ";" ;
+Decr.      Stmt ::= Expr "--"  ";" ;
 Ret.       Stmt ::= "return" Expr ";" ;
 VRet.      Stmt ::= "return" ";" ;
 Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
@@ -37,11 +46,15 @@ SExp.      Stmt ::= Expr  ";" ;
 
 -- Types ---------------------------------------------------
 
-Int.       Type ::= "int" ;
-Doub.      Type ::= "double" ;
-Bool.      Type ::= "boolean" ;
-Void.      Type ::= "void" ;
-internal   Fun. Type ::= Type "(" [Type] ")" ;
+Int.       BaseType ::= "int" ;
+Doub.      BaseType ::= "double" ;
+Bool.      BaseType ::= "boolean" ;
+Void.      BaseType ::= "void" ;
+
+TypeBase.  Type     ::= BaseType ;
+ArrType.   Type     ::= Type "[" "]" ;
+
+internal   Fun.     Type ::= Type "(" [Type] ")" ;
 
 separator  Type "," ;
 
@@ -54,6 +67,12 @@ ELitTrue.  Expr6 ::= "true" ;
 ELitFalse. Expr6 ::= "false" ;
 EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 EString.   Expr6 ::= String ;
+
+ArrIndex.  Expr6 ::= Expr6 "[" Expr "]" ;
+ArrLen.    Expr6 ::= Expr6 "." Ident ;
+NewArr.    Expr6 ::= "new" BaseType "[" Expr "]";
+
+
 Neg.       Expr5 ::= "-" Expr6 ;
 Not.       Expr5 ::= "!" Expr6 ;
 EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
@@ -83,8 +102,5 @@ NE.        RelOp ::= "!=" ;
 -- comments ------------------------------------------------
 
 comment    "#" ;
-
 comment    "//" ;
-
 comment    "/*" "*/" ;
-

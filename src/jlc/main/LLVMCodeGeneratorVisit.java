@@ -4,6 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import jlc.lib.javalette.Absyn.ArrAss;
+import jlc.lib.javalette.Absyn.ArrAssExpr;
+import jlc.lib.javalette.Absyn.ArrDecr;
+import jlc.lib.javalette.Absyn.ArrIncr;
+import jlc.lib.javalette.Absyn.ArrIndex;
+import jlc.lib.javalette.Absyn.ArrLen;
+import jlc.lib.javalette.Absyn.ArrType;
+import jlc.lib.javalette.Absyn.ForEach;
+import jlc.lib.javalette.Absyn.NewArr;
+import jlc.lib.javalette.Absyn.TypeBase;
 import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.LLVM.LLVMAddInstruction;
 import jlc.main.Instructions.LLVM.LLVMAllocaInstruction;
@@ -22,12 +32,15 @@ import jlc.main.Instructions.LLVM.LLVMNotInstruction;
 import jlc.main.Instructions.LLVM.LLVMOrInstruction;
 import jlc.main.Instructions.LLVM.LLVMPhiInstruction;
 import jlc.main.Instructions.LLVM.LLVMRelInstruction;
+import jlc.main.Instructions.LLVM.LLVMBitcastInstruction;
+import jlc.main.Instructions.LLVM.LLVMGetElementPtrInstruction;
 import jlc.main.Instructions.LLVM.LLVMReturnInstruction;
 import jlc.main.Instructions.LLVM.LLVMStoreInstruction;
 import jlc.main.Instructions.LLVM.Utils;
 import jlc.main.Operations.AddType;
 import jlc.main.Operations.MulType;
 import jlc.main.Operations.RelType;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.IntVariable;
@@ -91,6 +104,8 @@ public class LLVMCodeGeneratorVisit {
 
             args.add(newArg);
             args_to_allocate.add(arg);
+            newArg.SetVariableKind(VariableKind.TempVariable);
+            arg.SetVariableKind(VariableKind.LocalVariable);
             ctx.ClearLastVariable();
           }
 
@@ -112,14 +127,15 @@ public class LLVMCodeGeneratorVisit {
                 args_to_allocate.get(i).GetVariableType()));
 
             // Now we add store instruction
-            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(args.get(i), args_to_allocate.get(i)));
+            Variable argVal = args.get(i);
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(argVal, args_to_allocate.get(i)));
 
             // we can put the arg in side the loaded variable since it is a register
-            ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), args.get(i));
+            ctx.AddVariabelAsLoaded(args_to_allocate.get(i).GetVariableName(), argVal);
 
             // Also we should put them in ctx vairables
             ctx.AddToCtxVariable(args_to_allocate.get(i));
-          }
+        }
 
           ctx = p.blk_.accept(new BlkVisitor(), ctx);
 
@@ -142,6 +158,7 @@ public class LLVMCodeGeneratorVisit {
           Variable arg = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           arg.SetVariableName(p.ident_);
+          arg.SetVariableKind(VariableKind.LocalVariable);
           ctx.SetLastVariable(arg);
           return ctx;
         }
@@ -175,7 +192,7 @@ public class LLVMCodeGeneratorVisit {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Decl p, LLVMCodeGenCtx ctx) {
           p.type_.accept(new TypeVisitor(), ctx);
-
+          
           // This three instruction that does not do anything is for just purpose of not losing
           // outselfs and get confused. The purpose is that the series of next vistors know
           // what would be the type of variable in declaretion.
@@ -189,9 +206,11 @@ public class LLVMCodeGeneratorVisit {
             typeVariable = ctx.GetLastVariable();
 
             // Put variables inside ctx
-            ctx.AddToCtxVariable(typeVariable);
 
+            ctx.AddToCtxVariable(typeVariable);
+            typeVariable.SetVariableKind(VariableKind.LocalVariable);
             ctx.ClearLastVariable();
+
             ctx.SetLastVariable(typeVariable.GetNewVariableSameType());
           }
 
@@ -204,6 +223,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Ass p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable resultVariable = ctx.GetLastVariable();
+          resultVariable = ctx.EnsureLoaded(resultVariable);
           ctx.ClearLastVariable();
 
           // We should store resultVariable to the local variable
@@ -220,30 +240,24 @@ public class LLVMCodeGeneratorVisit {
           Variable one = new IntVariable("1");
           one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // Evaluate the expression to get the addressable location
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable localVar = ctx.GetLastVariable(); 
+          Variable loadedVar = ctx.EnsureLoaded(localVar);
+          ctx.ClearLastVariable();
 
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+        // Now loadedValue holds the value to decrement
+          Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loadedVar);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, loadedVar, one, result));
+
+          // Store back
+          if(localVar.GetVariableKind() == VariableKind.LocalVariable){
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(result, localVar));
+                      // Invalidate loaded value
+            ctx.UnloadVariable(localVar.GetVariableName());
+
+            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), result);
           }
-
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, isTmpExist, one, newTmp));
-
-          // Now, we need to store it in the local val
-          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
-
-          // Now remove old loaded tmp vairable
-          ctx.UnloadVariable(localVar.GetVariableName());
-
-          // Store the new loaded variable
-          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
@@ -252,37 +266,32 @@ public class LLVMCodeGeneratorVisit {
           Variable one = new IntVariable("1");
           one.SetVariableKind(VariableKind.ConstantVariable);
 
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
+          // Evaluate the expression to get the addressable location
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable localVar = ctx.GetLastVariable(); 
+          Variable loadedVar = ctx.EnsureLoaded(localVar);
+          ctx.ClearLastVariable();
 
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+        //Now loadedValue holds the value to decrement
+          Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loadedVar);
+          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, loadedVar, one, result));
+
+          if(localVar.GetVariableKind() == VariableKind.LocalVariable){
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(result, localVar));
+
+            ctx.UnloadVariable(localVar.GetVariableName());
+
+            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), result);
           }
-
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          Variable newTmp = ctx.GetNewTempVairableWithTheSameTypeOf(isTmpExist);
-          ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Minus, isTmpExist, one, newTmp));
-
-          // Now, we need to store it in the local val
-          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(newTmp, localVar));
-
-          // Now remove old loaded tmp vairable
-          ctx.UnloadVariable(localVar.GetVariableName());
-
-          // Store the new loaded variable
-          ctx.AddVariabelAsLoaded(localVar.GetVariableName(), newTmp);
 
           return ctx;
         }
 
+
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Ret p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           ctx.instruction_of_ctx.add(new LLVMReturnInstruction(result));
@@ -297,15 +306,13 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Cond p, LLVMCodeGenCtx ctx) {
-          // We should create two label. One label is for taking the statement of if
-          // the other one is for not taking the statement, and also a jumping for the 
-          // statement inside the if.
           List<String> labels = ctx.GetNewLabelWithPrefix("if.statement", "if.end");
           String ifStLabel = labels.get(0);
           String ifEnd = labels.get(1);
 
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
@@ -340,6 +347,7 @@ public class LLVMCodeGeneratorVisit {
           
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // Lets add the branch ininstruction
@@ -382,9 +390,6 @@ public class LLVMCodeGeneratorVisit {
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.While p, LLVMCodeGenCtx ctx) {
-          // We should create three label. One label is for re-evaluting condition of while
-          // and the second one for taking the statment of while and the last one is for 
-          // end of the while.
           List<String> labels = ctx.GetNewLabelWithPrefix("while.cond", "while.st", "while.end");
           String whileCondLabel = labels.get(0);
           String whileStLabel = labels.get(1);
@@ -399,6 +404,7 @@ public class LLVMCodeGeneratorVisit {
  
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable conditionResult = ctx.GetLastVariable();
+          conditionResult = ctx.EnsureLoaded(conditionResult);
           ctx.ClearLastVariable();
 
           // We should add the branching instruction after the expression results finished.
@@ -422,8 +428,396 @@ public class LLVMCodeGeneratorVisit {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.SExp p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
+          Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
           return ctx;
+        }
+
+      @Override
+      public LLVMCodeGenCtx visit(ArrAss p, LLVMCodeGenCtx ctx) {
+          // Evaluate the array variable (should yield an ArrayVariable)
+          Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
+          VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
+
+          //Load the array pointer (i8*)
+          Variable arrPtr = ctx.EnsureLoaded(arrVar);
+
+          // Evaluate the index expression
+          p.expr_1.accept(new ExprVisitor(), ctx);
+          Variable idxVar = ctx.GetLastVariable();
+          idxVar = ctx.EnsureLoaded(idxVar);
+          ctx.ClearLastVariable();
+
+          // evaluate the value to assign
+          p.expr_2.accept(new ExprVisitor(), ctx);
+          Variable valueVar = ctx.GetLastVariable();
+          valueVar = ctx.EnsureLoaded(valueVar);
+          ctx.ClearLastVariable();
+
+          // Bitcast the i8* to thecorrect element pointer type
+          Variable elemPtrTypeVar;
+          switch (elemType) {
+              case Int:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i32*")
+                  );
+                  break;
+              case Double:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "double*")
+                  );
+                  break;
+              case Boolean:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                  );
+                  break;
+              default:
+                  throw new RuntimeException("ArrAss: Unsupported element type");
+          }
+
+          // GEP to get the address of the element
+          Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+          ctx.instruction_of_ctx.add(
+              new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
+          );
+
+          // Store the value at that address
+          ctx.instruction_of_ctx.add(
+              new LLVMStoreInstruction(valueVar, gepResult)
+          );
+
+          return ctx;
+      }
+
+      @Override
+      public LLVMCodeGenCtx visit(ArrAssExpr p, LLVMCodeGenCtx ctx) {
+          // Evaluate the array expression (Expr6)
+          p.expr_1.accept(new ExprVisitor(), ctx);
+          Variable arrVar = ctx.GetLastVariable();
+          arrVar = ctx.EnsureLoaded(arrVar);
+          ctx.ClearLastVariable();
+
+          //Evaluate the index expression
+          p.expr_2.accept(new ExprVisitor(), ctx);
+          Variable idxVar = ctx.GetLastVariable();
+          idxVar = ctx.EnsureLoaded(idxVar);
+          ctx.ClearLastVariable();
+
+          // Evaluate the value to assign
+          p.expr_3.accept(new ExprVisitor(), ctx);
+          Variable valueVar = ctx.GetLastVariable();
+          valueVar = ctx.EnsureLoaded(valueVar);
+          ctx.ClearLastVariable();
+
+          // Determine the element type (from the array variable)
+          VariableType elemType;
+          if (arrVar instanceof ArrayVariable) {
+              elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
+          } else {
+              // If your ExprVisitor doesn't return ArrayVariable, you may need to track type info elsewhere
+              throw new RuntimeException("ArrAssExpr: arrVar is not an ArrayVariable");
+          }
+
+          // Bitcast the i8* to the correct element pointer type
+          Variable elemPtrTypeVar;
+          switch (elemType) {
+              case Int:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i32*")
+                  );
+                  break;
+              case Double:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "double*")
+                  );
+                  break;
+              case Boolean:
+                  elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                  ctx.instruction_of_ctx.add(
+                      new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i8*")
+                  );
+                  break;
+              default:
+                  throw new RuntimeException("ArrAssExpr: Unsupported element type");
+          }
+
+          // GEP to get the address of the element
+          Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+          ctx.instruction_of_ctx.add(
+              new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
+          );
+
+          // Store the value at that address
+          ctx.instruction_of_ctx.add(
+              new LLVMStoreInstruction(valueVar, gepResult)
+          );
+
+          return ctx;
+      }
+
+        @Override
+        public LLVMCodeGenCtx visit(ForEach p, LLVMCodeGenCtx ctx) {
+            // Evaluate the array expression
+            p.expr_.accept(new ExprVisitor(), ctx);
+            Variable arrVar = ctx.GetLastVariable();
+            arrVar = ctx.EnsureLoaded(arrVar);
+            ctx.ClearLastVariable();
+
+            // Get the element type
+            VariableType elemType;
+            if (arrVar instanceof ArrayVariable) {
+                elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
+            } else {
+                throw new RuntimeException("ForEach: arrVar is not an ArrayVariable");
+            }
+
+            // Get array length
+            Variable lenVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+            ctx.instruction_of_ctx.add(
+                new LLVMFuncCallIntruction("array_length", lenVar, arrVar)
+            );
+
+            // Allocate and initialize loop index
+            Variable idxVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+            ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(idxVar, VariableType.Int));
+            Variable zero = new IntVariable("0");
+            zero.SetVariableKind(VariableKind.ConstantVariable);
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(zero, idxVar));
+
+            // Create labels
+            List<String> labels = ctx.GetNewLabelWithPrefix("foreach.cond", "foreach.body", "foreach.inc", "foreach.end");
+            String condLabel = labels.get(0);
+            String bodyLabel = labels.get(1);
+            String incLabel = labels.get(2);
+            String endLabel = labels.get(3);
+
+            // Jump to condition
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condLabel));
+
+            // Condition block
+            ctx.instruction_of_ctx.add(new LLVMLabelInstruction(condLabel));
+            Variable idxLoaded = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(idxVar, idxLoaded));
+            Variable condVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+            ctx.instruction_of_ctx.add(new LLVMRelInstruction(RelType.LTH, idxLoaded, lenVar, condVar));
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condVar, bodyLabel, endLabel));
+
+            // Body block
+            ctx.instruction_of_ctx.add(new LLVMLabelInstruction(bodyLabel));
+            // Bitcast arrVar to element pointer type
+            Variable elemPtrTypeVar;
+            switch (elemType) {
+                case Int:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                    ctx.instruction_of_ctx.add(new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i32*"));
+                    break;
+                case Double:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                    ctx.instruction_of_ctx.add(new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "double*"));
+                    break;
+                case Boolean:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                    ctx.instruction_of_ctx.add(new LLVMBitcastInstruction(arrVar, elemPtrTypeVar, "i8*"));
+                    break;
+                default:
+                    throw new RuntimeException("ForEach: Unsupported element type");
+            }
+            // GEP to array[i]
+            Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+            ctx.instruction_of_ctx.add(new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxLoaded, gepResult, elemType));
+            // Load array[i]
+            Variable elemVal = ctx.GetNewTempVairableWithTheSameTypeOf(
+                elemType == VariableType.Int ? new IntVariable("") :
+                elemType == VariableType.Double ? new DoubleVariable("") :
+                new BooleanVariable("")
+            );
+            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(gepResult, elemVal));
+            // Allocate and store loop variable
+            Variable loopVar = elemType == VariableType.Int
+                ? new IntVariable(p.ident_)
+                : elemType == VariableType.Double
+                    ? new DoubleVariable(p.ident_)
+                    : new BooleanVariable(p.ident_);
+            loopVar.SetVariableKind(VariableKind.LocalVariable);
+            loopVar = ctx.GetRenamedVariable(loopVar);
+            ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(loopVar, elemType));
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(elemVal, loopVar));
+            ctx.AddToCtxVariable(loopVar);
+
+            // Emit the body
+            p.stmt_.accept(new StmtVisitor(), ctx);
+
+            // Increment block
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(incLabel));
+            ctx.instruction_of_ctx.add(new LLVMLabelInstruction(incLabel));
+            Variable idxInc = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+            Variable one = new IntVariable("1");
+            one.SetVariableKind(VariableKind.ConstantVariable);
+            ctx.instruction_of_ctx.add(new LLVMAddInstruction(AddType.Plus, idxLoaded, one, idxInc));
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(idxInc, idxVar));
+            ctx.instruction_of_ctx.add(new LLVMJmpInstruction(condLabel));
+
+            // End block
+            ctx.instruction_of_ctx.add(new LLVMLabelInstruction(endLabel));
+
+            return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrIncr p, LLVMCodeGenCtx ctx) {
+            // Get the array variable and its element type
+            Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
+            VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
+
+            // Load the array pointer (i8*)
+            Variable arrPtr = ctx.EnsureLoaded(arrVar);
+
+            // Evaluate the index expression
+            p.expr_.accept(new ExprVisitor(), ctx);
+            Variable idxVar = ctx.GetLastVariable();
+            idxVar = ctx.EnsureLoaded(idxVar);
+            ctx.ClearLastVariable();
+
+            // Bitcast to the correct element pointer type
+            Variable elemPtrTypeVar;
+            switch (elemType) {
+                case Int:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i32*")
+                    );
+                    break;
+                case Double:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "double*")
+                    );
+                    break;
+                case Boolean:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                    );
+                    break;
+                default:
+                    throw new RuntimeException("ArrDecr: Unsupported element type");
+            }
+
+            // GEP to get the address of the element
+            Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+            ctx.instruction_of_ctx.add(
+                new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
+            );
+
+            // Load the current value
+            Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
+                elemType == VariableType.Int ? new IntVariable("") :
+                elemType == VariableType.Double ? new DoubleVariable("") :
+                new BooleanVariable("")
+            );
+            ctx.instruction_of_ctx.add(
+                new LLVMLoadInstruction(gepResult, loaded)
+            );
+
+            //  Subtract 1 (or 1.0 for double)
+            Variable one = elemType == VariableType.Double
+                ? new DoubleVariable("1.0")
+                : new IntVariable("1");
+            one.SetVariableKind(VariableKind.ConstantVariable);
+
+            Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loaded);
+            ctx.instruction_of_ctx.add(
+                new LLVMAddInstruction(AddType.Plus, loaded, one, result)
+            );
+
+            // Store the result back
+            ctx.instruction_of_ctx.add(
+                new LLVMStoreInstruction(result, gepResult)
+            );
+
+            return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrDecr p, LLVMCodeGenCtx ctx) {
+            // Get the array variable and its element type
+            Variable arrVar = ctx.GetVariableFromCtx(p.ident_);
+            VariableType elemType = ((ArrayVariable) arrVar).GetArrayType().GetVariableType();
+
+            //  Load the array pointer (i8*)
+            Variable arrPtr = ctx.EnsureLoaded(arrVar);
+
+            // Evaluate the index expression
+            p.expr_.accept(new ExprVisitor(), ctx);
+            Variable idxVar = ctx.GetLastVariable();
+            idxVar = ctx.EnsureLoaded(idxVar);
+            ctx.ClearLastVariable();
+
+            //Bitcast to the correct element pointer type
+            Variable elemPtrTypeVar;
+            switch (elemType) {
+                case Int:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i32*")
+                    );
+                    break;
+                case Double:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "double*")
+                    );
+                    break;
+                case Boolean:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                    );
+                    break;
+                default:
+                    throw new RuntimeException("ArrDecr: Unsupported element type");
+            }
+
+            // GEP to get the address of the element
+            Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+            ctx.instruction_of_ctx.add(
+                new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
+            );
+
+            // Load the current value
+            Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
+                elemType == VariableType.Int ? new IntVariable("") :
+                elemType == VariableType.Double ? new DoubleVariable("") :
+                new BooleanVariable("")
+            );
+            ctx.instruction_of_ctx.add(
+                new LLVMLoadInstruction(gepResult, loaded)
+            );
+
+            // Subtract 1 (or 1.0 for double)
+            Variable one = elemType == VariableType.Double
+                ? new DoubleVariable("1.0")
+                : new IntVariable("1");
+            one.SetVariableKind(VariableKind.ConstantVariable);
+
+            Variable result = ctx.GetNewTempVairableWithTheSameTypeOf(loaded);
+            ctx.instruction_of_ctx.add(
+                new LLVMAddInstruction(AddType.Minus, loaded, one, result)
+            );
+
+            // Store the result back
+            ctx.instruction_of_ctx.add(
+                new LLVMStoreInstruction(result, gepResult)
+            );
+
+            return ctx;
         }
       }
     
@@ -434,16 +828,34 @@ public class LLVMCodeGeneratorVisit {
           Variable var = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
+          var.SetVariableKind(VariableKind.LocalVariable);
 
-          // Lets renamed the variable
           var = ctx.GetRenamedVariable(var);
-
-          // Now we need add alloca instruction
           ctx.instruction_of_ctx.add(new LLVMAllocaInstruction(var, var.GetVariableType()));
 
           // Now, we should intitlize the variable by ourself
-          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(Utils.GetDefaultValueOfVariableType(var.GetVariableType()), var));
+          ctx.instruction_of_ctx.add(new LLVMStoreInstruction(Utils.GetDefaultValueOfVariableType(var), var));
+          
+          if (var.GetVariableType() == VariableType.Array) {
+            // Determine the allocation function
+            Variable arrType = ((ArrayVariable) var).GetArrayType();
+            String allocFunc;
+            switch (arrType.GetVariableType()) {
+                case Int:     allocFunc = "alloc_array_i32"; break;
+                case Double:  allocFunc = "alloc_array_double"; break;
+                case Boolean: allocFunc = "alloc_array_i8"; break;
+                default: 
+                    throw new RuntimeException("Unsupported array type: ");
+            }
 
+            // Allocate the array: call the runtime function, result is i8*
+            Variable arrPtr = ctx.GetNewTempVairableWithTheSameTypeOf(new ArrayVariable("arr", arrType.GetVariableType()));
+            Variable zero = new IntVariable("0");
+            zero.SetVariableKind(VariableKind.ConstantVariable);
+            ctx.instruction_of_ctx.add(new LLVMFuncCallIntruction(allocFunc, arrPtr, zero));
+            // Store the array pointer in the variable
+            ctx.instruction_of_ctx.add(new LLVMStoreInstruction(arrPtr, var));
+          }
           // Set so that future declaration in the same token get variable of same type
           ctx.SetLastVariable(var);
 
@@ -455,7 +867,8 @@ public class LLVMCodeGeneratorVisit {
           Variable var = ctx.GetLastVariable();
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
-
+          var.SetVariableKind(VariableKind.LocalVariable);
+          
           // Lets renamed the variable
           var = ctx.GetRenamedVariable(var);
 
@@ -465,6 +878,8 @@ public class LLVMCodeGeneratorVisit {
           // Now lets evaluate its init value
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
+
           ctx.ClearLastVariable();
 
           // Now, we need to load the result into the variable
@@ -478,6 +893,30 @@ public class LLVMCodeGeneratorVisit {
       }
     
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, LLVMCodeGenCtx ctx) {
+          // TODO: I dont have any idea what is this
+          p.type_.accept(new TypeVisitor(), ctx);
+          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
+            x.accept(new TypeVisitor(), ctx);
+          }
+          return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(TypeBase p, LLVMCodeGenCtx ctx) {
+          p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          return ctx;
+        }
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrType p, LLVMCodeGenCtx ctx) {
+          ctx = p.type_.accept(new TypeVisitor(), ctx);
+          Variable arrType = ctx.GetLastVariable();  
+          ctx.SetLastVariable(new ArrayVariable("last", arrType.GetVariableType()));
+          return ctx;
+        }
+      }
+      public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Int p, LLVMCodeGenCtx ctx) {
           ctx.SetLastVariable(new IntVariable("last"));
@@ -498,36 +937,14 @@ public class LLVMCodeGeneratorVisit {
           ctx.SetLastVariable(new VoidVariable("last"));
           return ctx;
         }
-
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, LLVMCodeGenCtx ctx) {
-          // TODO: I dont have any idea what is this
-          p.type_.accept(new TypeVisitor(), ctx);
-          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
-            x.accept(new TypeVisitor(), ctx);
-          }
-          return ctx;
-        }
       }
-    
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         private boolean IsNewExper = true;
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EVar p, LLVMCodeGenCtx ctx) {
-          // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          if (isTmpExist == null) {
-            // We need to load the variable
-            Variable localVar = ctx.GetVariableFromCtx(p.ident_);
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LLVMLoadInstruction(localVar, isTmpExist));
-
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
-          }
-
-          // We have the isTmpExist as the temp register which loaded a local vriable
-          ctx.SetLastVariable(isTmpExist);
-          return ctx;
+            Variable var = ctx.GetVariableFromCtx(p.ident_);
+            ctx.SetLastVariable(var);
+            return ctx;
         }
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ELitInt p, LLVMCodeGenCtx ctx) {
@@ -564,6 +981,7 @@ public class LLVMCodeGeneratorVisit {
           for (jlc.lib.javalette.Absyn.Expr x: p.listexpr_) {
             x.accept(new ExprVisitor(), ctx);
             Variable arg = ctx.GetLastVariable();
+            arg = ctx.EnsureLoaded(arg);
             ctx.ClearLastVariable();
             args.add(arg);
           }
@@ -606,6 +1024,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Neg p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           // Lets get new temp variable
@@ -620,6 +1039,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Not p, LLVMCodeGenCtx ctx) {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable result = ctx.GetLastVariable();
+          result = ctx.EnsureLoaded(result);
           ctx.ClearLastVariable();
 
           // Lets get new temp variable
@@ -634,6 +1054,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EMul p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.mulop_.accept(new MulOpVisitor(), ctx);
@@ -644,6 +1065,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -660,6 +1082,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.EAdd p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.addop_.accept(new AddOpVisitor(), ctx);
@@ -670,6 +1093,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -686,6 +1110,7 @@ public class LLVMCodeGeneratorVisit {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.ERel p, LLVMCodeGenCtx ctx) {
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           p.relop_.accept(new RelOpVisitor(), ctx);
@@ -696,6 +1121,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Now lets generate the rel operation
@@ -727,6 +1153,7 @@ public class LLVMCodeGeneratorVisit {
           // Now we evaluate the first part of and
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           // Now lets see if the and is true so we can go to the second part
@@ -743,6 +1170,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Lets write the and instruction of both var1 and var2
@@ -784,6 +1212,7 @@ public class LLVMCodeGeneratorVisit {
           // Now we evaluate the first part of or
           p.expr_1.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
+          var1 = ctx.EnsureLoaded(var1);
           ctx.ClearLastVariable();
 
           // Now lets see if the or is false so we can go to the second part
@@ -800,6 +1229,7 @@ public class LLVMCodeGeneratorVisit {
 
           p.expr_2.accept(new ExprVisitor(), ctx);
           Variable var2 = ctx.GetLastVariable();
+          var2 = ctx.EnsureLoaded(var2);
           ctx.ClearLastVariable();
 
           // Lets write the or instruction of both var1 and var2
@@ -823,18 +1253,145 @@ public class LLVMCodeGeneratorVisit {
           ctx.SetLastVariable(tmp1);
           return ctx;
         }
-      }
-    
-      public class AddOpVisitor implements jlc.lib.javalette.Absyn.AddOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Plus p, LLVMCodeGenCtx ctx) {
-          ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Plus));
-          return ctx;
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrIndex p, LLVMCodeGenCtx ctx) {
+            // Evaluate the array expression (should yield an i8* pointer)
+            p.expr_1.accept(new ExprVisitor(), ctx);
+            Variable arrPtr = ctx.GetLastVariable();
+            arrPtr = ctx.EnsureLoaded(arrPtr);
+            ctx.ClearLastVariable();
+
+            // Evaluate the index expression
+            p.expr_2.accept(new ExprVisitor(), ctx);
+            Variable idxVar = ctx.GetLastVariable();
+            idxVar = ctx.EnsureLoaded(idxVar);
+            ctx.ClearLastVariable();
+
+            //Determine the element type (from the ArrayVariable)
+            VariableType elemType;
+            if (arrPtr instanceof ArrayVariable) {
+                elemType = ((ArrayVariable) arrPtr).GetArrayType().GetVariableType();
+            } else {
+                // Fallback or error
+                throw new RuntimeException("ArrIndex: arrPtr is not an ArrayVariable");
+            }
+
+            //Bitcast the i8* to the correct element pointer type
+            Variable elemPtrTypeVar;
+            switch (elemType) {
+                case Int:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i32*")
+                    );
+                    break;
+                case Double:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new DoubleVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "double*")
+                    );
+                    break;
+                case Boolean:
+                    elemPtrTypeVar = ctx.GetNewTempVairableWithTheSameTypeOf(new BooleanVariable(""));
+                    ctx.instruction_of_ctx.add(
+                        new LLVMBitcastInstruction(arrPtr, elemPtrTypeVar, "i8*")
+                    );
+                    break;
+                default:
+                    throw new RuntimeException("ArrIndex: Unsupported element type");
+            }
+
+            //GEP to get the address of the element
+            Variable gepResult = ctx.GetNewTempVairableWithTheSameTypeOf(elemPtrTypeVar);
+            ctx.instruction_of_ctx.add(
+                new LLVMGetElementPtrInstruction(elemPtrTypeVar, idxVar, gepResult, elemType)
+            );
+
+            //Load the value at that address
+            Variable loaded = ctx.GetNewTempVairableWithTheSameTypeOf(
+                elemType == VariableType.Int ? new IntVariable("") :
+                elemType == VariableType.Double ? new DoubleVariable("") :
+                new BooleanVariable("")
+            );
+            
+            ctx.instruction_of_ctx.add(
+                new jlc.main.Instructions.LLVM.LLVMLoadInstruction(gepResult, loaded)
+            );
+
+            // Set the result as the last variable
+            ctx.SetLastVariable(loaded);
+            return ctx;
         }
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Minus p, LLVMCodeGenCtx ctx) {
-          ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Minus));
-          return ctx;
+
+        @Override
+        public LLVMCodeGenCtx visit(ArrLen p, LLVMCodeGenCtx ctx) {
+        // Evaluate array expression
+        p.expr_.accept(new ExprVisitor(), ctx);
+        Variable arrPtr = ctx.GetLastVariable();
+        arrPtr = ctx.EnsureLoaded(arrPtr);
+        ctx.ClearLastVariable();
+
+        // Call the runtime function to get the length
+        Variable lenVar = ctx.GetNewTempVairableWithTheSameTypeOf(new IntVariable("last"));
+        ctx.instruction_of_ctx.add(
+            new LLVMFuncCallIntruction("array_length", lenVar, arrPtr)
+        );
+
+        ctx.SetLastVariable(lenVar);
+        return ctx;
+        
         }
-      }
+        public LLVMCodeGenCtx visit(NewArr p, LLVMCodeGenCtx ctx) {
+          // Evaluate the size expression
+          p.expr_.accept(new ExprVisitor(), ctx);
+          Variable sizeVar = ctx.GetLastVariable();
+          sizeVar = ctx.EnsureLoaded(sizeVar);
+          ctx.ClearLastVariable();
+
+          // Always move the size into a temp register (even if it's a constant)
+          Variable sizeTemp = ctx.GetNewTempVairableWithTheSameTypeOf(sizeVar);
+          // ctx.instruction_of_ctx.add(new LLVMStoreInstruction(sizeVar, sizeTemp));
+          Variable newVar = new IntVariable("0");
+          newVar.SetVariableKind(VariableKind.ConstantVariable);
+          ctx.instruction_of_ctx.add(
+              new LLVMAddInstruction(AddType.Plus, newVar , sizeVar, sizeTemp)
+          );
+          // Check base type of array
+          ctx = p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          Variable typeVar = ctx.GetLastVariable();
+          VariableType arrType = typeVar.GetVariableType();
+          ctx.ClearLastVariable();
+
+          // Determine the allocation function
+          String allocFunc;
+          switch (arrType) {
+              case Int:     allocFunc = "alloc_array_i32"; break;
+              case Double:  allocFunc = "alloc_array_double"; break;
+              case Boolean: allocFunc = "alloc_array_i8"; break;
+              default: 
+                  throw new RuntimeException("Unsupported array type: " + arrType);
+          }
+
+          // Allocate the array: call the runtime function, result is i8*
+          Variable arrPtr = ctx.GetNewTempVairableWithTheSameTypeOf(new ArrayVariable("arr", arrType));
+          ctx.instruction_of_ctx.add(new LLVMFuncCallIntruction(allocFunc, arrPtr, sizeTemp));
+          
+          // Set the result as the last variable (as i8* pointer)
+          ctx.SetLastVariable(arrPtr);
+          return ctx;     
+          }
+        }
+        public class AddOpVisitor implements jlc.lib.javalette.Absyn.AddOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+          public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Plus p, LLVMCodeGenCtx ctx) {
+            ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Plus));
+            return ctx;
+          }
+          public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Minus p, LLVMCodeGenCtx ctx) {
+            ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Minus));
+            return ctx;
+          }
+        }
     
       public class MulOpVisitor implements jlc.lib.javalette.Absyn.MulOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Times p, LLVMCodeGenCtx ctx) {

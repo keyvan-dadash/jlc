@@ -6,5 +6,6 @@ public enum VariableType {
     Boolean,
     Double,
     Void,
-    String
+    String,
+    Array
 }

@@ -35,8 +35,13 @@ public class CodeGenerator {
         code.append("declare void @printInt(i32)\n");
         code.append("declare void @printDouble(double)\n");
         code.append("declare void @printString(i8*)\n");
+        code.append("declare i32 @array_length(i8*)\n");
+        code.append("declare i8* @alloc_array_i32(i32)\n");
+        code.append("declare i8* @alloc_array_i8(i32)\n");
+        code.append("declare i8* @alloc_array_double(i32)\n");
         code.append("declare i32 @readInt()\n");
         code.append("declare double @readDouble()\n\n");
+
 
         // Append global instructions (if any).
         for (Instruction instr : llvmCodeGenCtx.global_instructions) {

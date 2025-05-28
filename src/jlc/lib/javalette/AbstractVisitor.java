@@ -30,6 +30,11 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visit(jlc.lib.javalette.Absyn.BStmt p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Decl p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Ass p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrAss p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrAssExpr p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ForEach p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrIncr p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrDecr p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Incr p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Decr p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Ret p, A arg) { return visitDefault(p, arg); }
@@ -47,11 +52,17 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visitDefault(jlc.lib.javalette.Absyn.Item p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
     }
-    /* Type */
+    /* BaseType */
     public R visit(jlc.lib.javalette.Absyn.Int p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Doub p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Bool p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Void p, A arg) { return visitDefault(p, arg); }
+    public R visitDefault(jlc.lib.javalette.Absyn.BaseType p, A arg) {
+      throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
+    }
+    /* Type */
+    public R visit(jlc.lib.javalette.Absyn.TypeBase p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrType p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Fun p, A arg) { return visitDefault(p, arg); }
     public R visitDefault(jlc.lib.javalette.Absyn.Type p, A arg) {
       throw new IllegalArgumentException(this.getClass().getName() + ": " + p);
@@ -64,6 +75,9 @@ public class AbstractVisitor<R,A> implements AllVisitor<R,A> {
     public R visit(jlc.lib.javalette.Absyn.ELitFalse p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.EApp p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.EString p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrIndex p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.ArrLen p, A arg) { return visitDefault(p, arg); }
+    public R visit(jlc.lib.javalette.Absyn.NewArr p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Neg p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.Not p, A arg) { return visitDefault(p, arg); }
     public R visit(jlc.lib.javalette.Absyn.EMul p, A arg) { return visitDefault(p, arg); }

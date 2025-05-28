@@ -1,6 +1,8 @@
 # Compiled class file
 *.class
 
+.vscode
+
 lib/*bc
 
 final_executable

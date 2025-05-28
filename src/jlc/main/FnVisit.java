@@ -9,6 +9,21 @@ import java.util.logging.Logger;
 import jlc.main.Variables.Variable;
 import jlc.main.Variables.IntVariable;
 import jlc.main.Variables.VoidVariable;
+import jlc.lib.javalette.Absyn.ArrAss;
+import jlc.lib.javalette.Absyn.ArrAssExpr;
+import jlc.lib.javalette.Absyn.ArrDecr;
+import jlc.lib.javalette.Absyn.ArrIncr;
+import jlc.lib.javalette.Absyn.ArrIndex;
+import jlc.lib.javalette.Absyn.ArrLen;
+import jlc.lib.javalette.Absyn.ArrType;
+import jlc.lib.javalette.Absyn.Bool;
+import jlc.lib.javalette.Absyn.Doub;
+import jlc.lib.javalette.Absyn.ForEach;
+import jlc.lib.javalette.Absyn.Int;
+import jlc.lib.javalette.Absyn.NewArr;
+import jlc.lib.javalette.Absyn.TypeBase;
+import jlc.lib.javalette.Absyn.Void;
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.StringVariable;
@@ -238,6 +253,39 @@ public class FnVisit {
           p.expr_.accept(new ExprVisitor(), ctx);
           return ctx;
         }
+        @Override
+        public Ctx visit(ArrAss p, Ctx ctx) {
+          p.expr_1.accept(new ExprVisitor(), ctx);
+          p.expr_2.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
+        @Override
+        public Ctx visit(ArrAssExpr p, Ctx ctx) {
+          // ArrAssExpr is a special case, we should process the type and the item
+          p.expr_1.accept(new ExprVisitor(), ctx);
+          p.expr_2.accept(new ExprVisitor(), ctx);
+          p.expr_3.accept(new ExprVisitor(), ctx);
+          return ctx;
+
+        }
+        @Override
+        public Ctx visit(ForEach p, Ctx ctx) {
+          // ForEach is a special case, we should process the type and the item
+          p.type_.accept(new TypeVisitor(), ctx);
+          p.stmt_.accept(new StmtVisitor(), ctx);
+          p.expr_.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
+        @Override
+        public Ctx visit(ArrIncr p, Ctx ctx) {
+          p.expr_.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
+        @Override
+        public Ctx visit(ArrDecr p, Ctx ctx) {
+          p.expr_.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
       }
     
       public class ItemVisitor implements jlc.lib.javalette.Absyn.Item.Visitor<Ctx, Ctx> {
@@ -253,26 +301,7 @@ public class FnVisit {
       }
     
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<Ctx, Ctx> {
-        public Ctx visit(jlc.lib.javalette.Absyn.Int p, Ctx ctx) {
-          
-          ctx.last_expr_result = new IntVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Doub p, Ctx ctx) {
-          
-          ctx.last_expr_result = new DoubleVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Bool p, Ctx ctx) {
-          
-          ctx.last_expr_result = new BooleanVariable("last");
-          return ctx;
-        }
-        public Ctx visit(jlc.lib.javalette.Absyn.Void p, Ctx ctx) {
-          
-          ctx.last_expr_result = new VoidVariable("last");
-          return ctx;
-        }
+        
         public Ctx visit(jlc.lib.javalette.Absyn.Fun p, Ctx ctx) {
           
           // TODO: I dont have any idea what is this
@@ -282,6 +311,46 @@ public class FnVisit {
           }
           return ctx;
         }
+
+        public Ctx visit(TypeBase p, Ctx ctx) {
+          ctx = p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          return ctx;
+        }
+
+        public Ctx visit(ArrType p, Ctx ctx) {
+          ctx = p.type_.accept(new TypeVisitor(), ctx);
+          Variable last = ctx.last_expr_result;
+          ctx.last_expr_result = new ArrayVariable("last", last.GetVariableType());
+          return ctx;
+        }
+      }
+      
+      public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<Ctx, Ctx> {
+
+        @Override
+        public Ctx visit(Int p, Ctx ctx) {
+          ctx.last_expr_result = new IntVariable("last");
+          return ctx;
+        }
+
+        @Override
+        public Ctx visit(Doub p, Ctx ctx) {
+          ctx.last_expr_result = new DoubleVariable("last");
+          return ctx;
+        }
+
+        @Override
+        public Ctx visit(Bool p, Ctx ctx) {
+          ctx.last_expr_result = new BooleanVariable("last");
+          return ctx;
+        }
+
+        @Override
+        public Ctx visit(Void p, Ctx ctx) {
+          ctx.last_expr_result = new VoidVariable("last");
+          return ctx;
+        }
+        
       }
     
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<Ctx, Ctx> {
@@ -357,6 +426,24 @@ public class FnVisit {
           
           p.expr_1.accept(new ExprVisitor(), ctx);
           p.expr_2.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
+        @Override
+        public Ctx visit(ArrIndex p, Ctx ctx) {
+          p.expr_1.accept(new ExprVisitor(), ctx);
+          p.expr_2.accept(new ExprVisitor(), ctx);
+          return ctx;
+        }
+        @Override
+        public Ctx visit(ArrLen p, Ctx ctx) {
+          p.expr_.accept(new ExprVisitor(), ctx);
+          return ctx;
+
+        }
+        @Override
+        public Ctx visit(NewArr p, Ctx ctx) {
+          p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          p.expr_.accept(new ExprVisitor(), ctx);
           return ctx;
         }
       }

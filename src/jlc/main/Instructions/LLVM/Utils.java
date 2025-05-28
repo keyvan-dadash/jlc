@@ -1,5 +1,6 @@
 package jlc.main.Instructions.LLVM;
 
+import jlc.main.Variables.ArrayVariable;
 import jlc.main.Variables.BooleanVariable;
 import jlc.main.Variables.DoubleVariable;
 import jlc.main.Variables.IntVariable;
@@ -34,14 +35,17 @@ public class Utils {
             case String: {
                 return "i8*";
             }
+            case Array: {
+                return "i8*";
+            }
             default: {
                 throw new RuntimeException(String.format("other variable types cannot be converted to llvm variable type. %s", varType));
             }
         }
     }
 
-    public static Variable GetDefaultValueOfVariableType(VariableType varType) {
-        switch (varType) {
+    public static Variable GetDefaultValueOfVariableType(Variable variable) {
+        switch (variable.GetVariableType()) {
             case Int: {
                 Variable var = new IntVariable("0");
                 var.SetVariableKind(VariableKind.ConstantVariable);
@@ -54,6 +58,11 @@ public class Utils {
             }
             case Double: {
                 Variable var = new DoubleVariable("0.0");
+                var.SetVariableKind(VariableKind.ConstantVariable);
+                return var;
+            }
+            case Array: {
+                Variable var = new ArrayVariable("null", variable.GetArrayType().GetVariableType());
                 var.SetVariableKind(VariableKind.ConstantVariable);
                 return var;
             }

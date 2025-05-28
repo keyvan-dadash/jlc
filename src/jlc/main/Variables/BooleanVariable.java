@@ -47,11 +47,21 @@ public class BooleanVariable implements Variable {
 
     @Override
     public boolean IsSameAs(Variable var) {
-        return var != null && var.GetVariableType() == VariableType.Boolean;
+        if (var == null) return false;
+            if (var instanceof ArrayVariable) {
+                return ((ArrayVariable) var).GetArrayType().GetVariableType() == VariableType.Boolean;
+            }
+        return var.GetVariableType() == VariableType.Boolean;
     }
 
     @Override
     public Variable GetNewVariableSameType() {
         return new BooleanVariable("last", VariableKind.Unkown);
+    }
+
+    @Override
+    public Variable GetArrayType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'GetArrayType'");
     }
 }
