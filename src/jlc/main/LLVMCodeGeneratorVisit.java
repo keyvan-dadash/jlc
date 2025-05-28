@@ -190,7 +190,7 @@ public class LLVMCodeGeneratorVisit {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Decl p, LLVMCodeGenCtx ctx) {
           p.type_.accept(new TypeVisitor(), ctx);
-
+          
           // This three instruction that does not do anything is for just purpose of not losing
           // outselfs and get confused. The purpose is that the series of next vistors know
           // what would be the type of variable in declaretion.
@@ -435,33 +435,28 @@ public class LLVMCodeGeneratorVisit {
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrAss p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ArrAss p, LLVMCodeGenCtx ctx) {
+          return ctx;// TODO Auto-generated method stub
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrAssExpr p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ArrAssExpr p, LLVMCodeGenCtx ctx) {
+          return ctx;// TODO Auto-generated method stub
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ForEach p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ForEach p, LLVMCodeGenCtx ctx) {
+          return ctx;// TODO Auto-generated method stub
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrIncr p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ArrIncr p, LLVMCodeGenCtx ctx) {
+          return ctx;// TODO Auto-generated method stub
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrDecr p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ArrDecr p, LLVMCodeGenCtx ctx) {
+          return ctx;// TODO Auto-generated method stub
         }
       }
     
@@ -495,7 +490,7 @@ public class LLVMCodeGeneratorVisit {
           ctx.ClearLastVariable();
           var.SetVariableName(p.ident_);
           var.SetVariableKind(VariableKind.LocalVariable);
-
+          
           // Lets renamed the variable
           var = ctx.GetRenamedVariable(var);
 
@@ -506,6 +501,9 @@ public class LLVMCodeGeneratorVisit {
           p.expr_.accept(new ExprVisitor(), ctx);
           Variable var1 = ctx.GetLastVariable();
           var1 = ctx.EnsureLoaded(var1);
+          if(var1.GetVariableType() == VariableType.Array) {
+            ctx.SetArrayPtr(var.GetVariableName(), var1.GetVariableName());
+          }
           ctx.ClearLastVariable();
 
           // Now, we need to load the result into the variable
@@ -881,34 +879,62 @@ public class LLVMCodeGeneratorVisit {
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrIndex p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        public LLVMCodeGenCtx visit(ArrIndex p, LLVMCodeGenCtx ctx) {
+
+          return ctx; // This is not implemented yet
         }
 
         @Override
-        public LLVMCodeGenCtx visit(ArrLen p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
-        }
+        public LLVMCodeGenCtx visit(ArrLen p, LLVMCodeGenCtx ctx) {
 
-        @Override
-        public LLVMCodeGenCtx visit(NewArr p, LLVMCodeGenCtx arg) {
-          // TODO Auto-generated method stub
-          throw new UnsupportedOperationException("Unimplemented method 'visit'");
+          return ctx; // This is not implemented yet
         }
-      }
-    
-      public class AddOpVisitor implements jlc.lib.javalette.Absyn.AddOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Plus p, LLVMCodeGenCtx ctx) {
-          ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Plus));
-          return ctx;
+        public LLVMCodeGenCtx visit(NewArr p, LLVMCodeGenCtx ctx) {
+          // Evaluate the size expression
+          p.expr_.accept(new ExprVisitor(), ctx);
+          Variable sizeVar = ctx.GetLastVariable();
+          ctx.ClearLastVariable();
+
+          // Always move the size into a temp register (even if it's a constant)
+          Variable sizeTemp = ctx.GetNewTempVairableWithTheSameTypeOf(sizeVar);
+          ctx.instruction_of_ctx.add(
+              new LLVMAddInstruction(AddType.Plus, new IntVariable("0"), sizeVar, sizeTemp)
+          );
+          // Check base type of array
+          ctx = p.basetype_.accept(new BaseTypeVisitor(), ctx);
+          Variable typeVar = ctx.GetLastVariable();
+          VariableType arrType = typeVar.GetVariableType();
+          ctx.ClearLastVariable();
+
+          // Determine the allocation function
+          String allocFunc;
+          switch (arrType) {
+              case Int:     allocFunc = "alloc_array_i32"; break;
+              case Double:  allocFunc = "alloc_array_double"; break;
+              case Boolean: allocFunc = "alloc_array_i8"; break;
+              default: 
+                  throw new RuntimeException("Unsupported array type: " + arrType);
+          }
+
+          // Allocate the array: call the runtime function, result is i8*
+          Variable arrPtr = ctx.GetNewTempVairableWithTheSameTypeOf(new ArrayVariable("arr", arrType));
+          ctx.instruction_of_ctx.add(new LLVMFuncCallIntruction(allocFunc, arrPtr, sizeTemp));
+          
+          // Set the result as the last variable (as i8* pointer)
+          ctx.SetLastVariable(arrPtr);
+          return ctx;     
+          }
         }
-        public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Minus p, LLVMCodeGenCtx ctx) {
-          ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Minus));
-          return ctx;
+        public class AddOpVisitor implements jlc.lib.javalette.Absyn.AddOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
+          public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Plus p, LLVMCodeGenCtx ctx) {
+            ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Plus));
+            return ctx;
+          }
+          public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Minus p, LLVMCodeGenCtx ctx) {
+            ctx.SetLastInstruction(new LLVMAddInstruction(AddType.Minus));
+            return ctx;
+          }
         }
-      }
     
       public class MulOpVisitor implements jlc.lib.javalette.Absyn.MulOp.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Times p, LLVMCodeGenCtx ctx) {

@@ -68,6 +68,14 @@ public class LLVMCodeGenCtx {
     // content.
     public Map<String, String> global_strings;
 
+    // array_ptr holds the pointer to the array that we have allocated.
+    // This is needed because we need to keep the pointer to the array
+    // in order to access the elements of the array.
+    // Note: this is a map of array name to the pointer to the array.
+    // For example, if we have an array named arr, we will have a pointer
+    // to the array in this map with the key "arr".
+    public Map<String, String> array_ptr;
+
     // parent shows what is the parent of ctx. This is need 
     // because sometimes we generate a new ctx but still we need
     // to search for variables and these stuff in our parents.
@@ -91,6 +99,7 @@ public class LLVMCodeGenCtx {
         loaded_variables = new HashMap<>();
         mapped_varibles = new HashMap<>();
         global_strings = new HashMap<>();
+        array_ptr = new HashMap<>();
         last_incompelete_instruction = null;
         last_variable = null;
         parent = null;
@@ -352,6 +361,23 @@ public class LLVMCodeGenCtx {
         }
         // Already a value (temp, constant, etc.)
         return var;
+    }
+
+    // GetArrayPtr will return the pointer to the array with the given name.
+    public String GetArrayPtr(String arrayName) {
+        String ptr = array_ptr.get(arrayName);
+        if (ptr == null) {
+            throw new RuntimeException(String.format("array %s does not exist", arrayName));
+        }
+        return ptr;
+    }
+    
+    // SetArrayPtr will set the pointer to the array with the given name.
+    public void SetArrayPtr(String arrayName, String ptr) {
+        if (array_ptr.containsKey(arrayName)) {
+            throw new RuntimeException(String.format("array %s already exists", arrayName));
+        }
+        array_ptr.put(arrayName, ptr);
     }
 }
 

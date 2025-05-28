@@ -12,6 +12,7 @@ public class LLVMFuncCallIntruction implements Instruction {
     private Variable return_var;
     private List<Variable> args;
     private Function fn;
+    private String globalFn;
     private int numOfSpace;
 
     public LLVMFuncCallIntruction() {
@@ -22,6 +23,16 @@ public class LLVMFuncCallIntruction implements Instruction {
         this.args = new ArrayList<>();
         this.SetVariables(fn, returnVar, args);
     }
+    
+    public LLVMFuncCallIntruction(String fnName, Variable returnVar, Variable... args) {
+        this.globalFn = fnName;
+        this.return_var = returnVar;
+        this.fn = null;
+        this.args = new ArrayList<>();
+        for (Variable v : args) this.args.add(v);
+        AddNumOfSpaceForPrefix(4);
+    }
+
 
     public void SetVariables(Function fn, Variable returnVar, List<Variable> args) {
         this.return_var = returnVar;
@@ -30,6 +41,7 @@ public class LLVMFuncCallIntruction implements Instruction {
         AddNumOfSpaceForPrefix(4);
     }
 
+
     @Override
     public void AddNumOfSpaceForPrefix(int num) {
         this.numOfSpace = num;
@@ -37,21 +49,31 @@ public class LLVMFuncCallIntruction implements Instruction {
 
     @Override
     public String GenerateInstruction() {
-        if (return_var.IsSameAs(new VoidVariable(""))) {
-            // Return of the function is void, so we dont need to assign it to anything.
-            return String.format("%scall void @%s(%s)",
+
+        if(fn != null) {
+            if(!return_var.IsSameAs(new VoidVariable(""))){
+                // Return of the function is void, so we dont need to assign it to anything.
+                return String.format("%scall void @%s(%s)",
+                    Utils.GetNumOfSpace(this.numOfSpace),
+                    fn.fn_name,
+                    generateArgsStr());
+            }
+            return String.format("%s%s = call %s @%s(%s)",
                 Utils.GetNumOfSpace(this.numOfSpace),
+                Utils.VariableToLLVMVariable(return_var),
+                Utils.VariableTypeToLLVMVariableType(return_var.GetVariableType()),
                 fn.fn_name,
                 generateArgsStr());
         }
-
+        
+        // If the function is not defined in the current context, we assume it's a global function.
         return String.format("%s%s = call %s @%s(%s)",
             Utils.GetNumOfSpace(this.numOfSpace),
             Utils.VariableToLLVMVariable(return_var),
             Utils.VariableTypeToLLVMVariableType(return_var.GetVariableType()),
-            fn.fn_name,
+            globalFn,
             generateArgsStr());
-    }
+}
 
     private String generateArgsStr() {
         String argsStr = "";

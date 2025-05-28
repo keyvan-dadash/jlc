@@ -34,6 +34,9 @@ public class Utils {
             case String: {
                 return "i8*";
             }
+            case Array: {
+                return "i8*";
+            }
             default: {
                 throw new RuntimeException(String.format("other variable types cannot be converted to llvm variable type. %s", varType));
             }
