@@ -71,7 +71,80 @@ test : absyn \
 	jlc/main/Instructions/LLVM/LLVMBitcastInstruction.class \
 	jlc/main/LLVMCodeGenCtx.class \
 	jlc/main/LLVMCodeGeneratorVisit.class \
-	jlc/main/Instructions/LLVM/Utils.class
+	jlc/main/Instructions/LLVM/Utils.class \
+	jlc/main/X86IRGeneratorVisit.class \
+	jlc/main/X86CodeGenCtx.class \
+	jlc/main/IRCodeGenerator.class \
+	jlc/main/Instructions/x86/IR/AddIR.class \
+	jlc/main/Instructions/x86/IR/AndIR.class \
+	jlc/main/Instructions/x86/IR/AssIR.class \
+	jlc/main/Instructions/x86/IR/CallFnIR.class \
+	jlc/main/Instructions/x86/IR/CmpIR.class \
+	jlc/main/Instructions/x86/IR/FuncDef.class \
+	jlc/main/Instructions/x86/IR/GlobalStringIR.class \
+	jlc/main/Instructions/x86/IR/GlobalDoubleIR.class \
+	jlc/main/Instructions/x86/IR/IR.class \
+	jlc/main/Instructions/x86/IR/JmpIR.class \
+	jlc/main/Instructions/x86/IR/JmpNEIR.class \
+	jlc/main/Instructions/x86/IR/LabelIR.class \
+	jlc/main/Instructions/x86/IR/LoadIR.class \
+	jlc/main/Instructions/x86/IR/MulIR.class \
+	jlc/main/Instructions/x86/IR/NegIR.class \
+	jlc/main/Instructions/x86/IR/NotIR.class \
+	jlc/main/Instructions/x86/IR/OrIR.class \
+	jlc/main/Instructions/x86/IR/RelIR.class \
+	jlc/main/Instructions/x86/IR/RetIR.class \
+	jlc/main/Instructions/x86/IR/StoreIR.class \
+	jlc/main/Instructions/x86/IR/TestIR.class \
+	jlc/main/Instructions/x86/IR/SectionIR.class \
+	jlc/main/Instructions/x86/IR/ExternIR.class \
+	jlc/main/Instructions/x86/IR/GlobalIR.class \
+	jlc/main/Instructions/x86/IR/JmpEIR.class \
+	jlc/main/Instructions/x86/Address.class \
+	jlc/main/Instructions/x86/MemSize.class \
+	jlc/main/Instructions/x86/RegisterSaver.class \
+	jlc/main/Instructions/x86/LivenessAnalysis.class \
+	jlc/main/Instructions/x86/Operand.class \
+	jlc/main/Instructions/x86/Register.class \
+	jlc/main/Instructions/x86/LinearScanAllocator.class \
+	jlc/main/Instructions/x86/Instructions/X86AddFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86AddInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86AndInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86CallInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86CmpInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86CmpFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86DivFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86DivInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86JeInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86JmpInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86JneInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86LabelInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86ModInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86MoveInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86MoveFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86MulFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86MulInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86NotInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86OrInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86PopInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86PushInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86RetInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SubFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SubInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86TestInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86NegInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86XorInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86XorFPInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SetccInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86MovzxInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86CqoInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86DirectiveInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SubImmediateInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86AddImmediateInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SectionInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86GlobalInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86ExternInstruction.class \
+	jlc/main/Instructions/x86/Instructions/X86SetzInstruction.class
 
 RESOLVED_BIN_PATH := $(shell pwd)/../bin
 

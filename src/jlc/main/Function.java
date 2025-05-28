@@ -9,6 +9,8 @@ import jlc.main.Variables.Variable;
 public class Function {
     public Function() {
         func_args = new ArrayList<>();
+        func_local = new ArrayList<>();
+        func_temps = new ArrayList<>();
     }
     
     public Function(List<Variable> func_args, Variable return_var, String fn_name) {
@@ -54,6 +56,12 @@ public class Function {
 
     // func_args shows what is the type of each of variable of a function's parameter.
     public List<Variable> func_args;
+
+    // func_local holds function's local variable.
+    public List<Variable> func_local;
+
+    // temporary variable that resides in this function.
+    public List<Variable> func_temps;
 
     // return_var shows what is the return type of the function.
     public Variable return_var;
