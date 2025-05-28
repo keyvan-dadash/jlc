@@ -916,6 +916,7 @@ public class LLVMCodeGeneratorVisit {
           return ctx;
         }
       }
+
       public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
 
         public LLVMCodeGenCtx visit(jlc.lib.javalette.Absyn.Int p, LLVMCodeGenCtx ctx) {
@@ -938,6 +939,7 @@ public class LLVMCodeGeneratorVisit {
           return ctx;
         }
       }
+      
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<LLVMCodeGenCtx, LLVMCodeGenCtx> {
         private boolean IsNewExper = true;
 

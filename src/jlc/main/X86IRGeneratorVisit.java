@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import javax.management.RuntimeErrorException;
+
+import jlc.lib.javalette.Absyn.ArrType;
 import jlc.main.Instructions.Instruction;
 import jlc.main.Instructions.x86.Utils;
 import jlc.main.Instructions.x86.IR.AddIR;
@@ -151,6 +154,26 @@ public class X86IRGeneratorVisit {
       }
     
       public class StmtVisitor implements jlc.lib.javalette.Absyn.Stmt.Visitor<X86CodeGenCtx, X86CodeGenCtx> {
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrAss p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrAssExpr p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ForEach p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrIncr p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrDecr p, X86CodeGenCtx arg) {
+            return arg;
+        }
         
         public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.Empty p, X86CodeGenCtx ctx) {
           return ctx;
@@ -213,15 +236,11 @@ public class X86IRGeneratorVisit {
           one.SetVariableKind(VariableKind.ConstantVariable);
 
           // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LoadIR(isTmpExist, localVar));
-
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable isTmpExist = ctx.GetLastVariable();
+          Variable localVar = ctx.lastLocalVariable;
+          if (localVar == null) {
+            throw new RuntimeException("couldnt find the local vairable");
           }
 
           // We have the isTmpExist as the temp register which loaded a local vriable
@@ -245,15 +264,11 @@ public class X86IRGeneratorVisit {
           one.SetVariableKind(VariableKind.ConstantVariable);
 
           // We first need to check if there is any temp register that has this vairable inside it
-          Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
-          Variable localVar = ctx.GetVariableFromCtx(p.ident_);;
-          if (isTmpExist == null) {
-            // We need to load the variable
-            isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
-            ctx.instruction_of_ctx.add(new LoadIR(isTmpExist, localVar));
-
-            // We store it as a vriable that has already loaded a local vriable
-            ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
+          ctx = p.expr_.accept(new ExprVisitor(), ctx);
+          Variable isTmpExist = ctx.GetLastVariable();
+          Variable localVar = ctx.lastLocalVariable;
+          if (localVar == null) {
+            throw new RuntimeException("couldnt find the local vairable");
           }
 
           // We have the isTmpExist as the temp register which loaded a local vriable
@@ -485,6 +500,28 @@ public class X86IRGeneratorVisit {
     
       public class TypeVisitor implements jlc.lib.javalette.Absyn.Type.Visitor<X86CodeGenCtx, X86CodeGenCtx> {
 
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.TypeBase p, X86CodeGenCtx arg) {
+            p.basetype_.accept(new BaseTypeVisitor(), arg);
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, X86CodeGenCtx ctx) {
+          // TODO: I dont have any idea what is this
+          p.type_.accept(new TypeVisitor(), ctx);
+          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
+            x.accept(new TypeVisitor(), ctx);
+          }
+          return ctx;
+        }
+
+        @Override
+        public X86CodeGenCtx visit(ArrType p, X86CodeGenCtx ctx) {
+          return ctx;
+        }
+      }
+
+      public class BaseTypeVisitor implements jlc.lib.javalette.Absyn.BaseType.Visitor<X86CodeGenCtx, X86CodeGenCtx> {
+
         public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.Int p, X86CodeGenCtx ctx) {
           ctx.SetLastVariable(new IntVariable("last"));
           return ctx;
@@ -504,28 +541,33 @@ public class X86IRGeneratorVisit {
           ctx.SetLastVariable(new VoidVariable("last"));
           return ctx;
         }
-
-        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.Fun p, X86CodeGenCtx ctx) {
-          // TODO: I dont have any idea what is this
-          p.type_.accept(new TypeVisitor(), ctx);
-          for (jlc.lib.javalette.Absyn.Type x: p.listtype_) {
-            x.accept(new TypeVisitor(), ctx);
-          }
-          return ctx;
-        }
       }
     
       public class ExprVisitor implements jlc.lib.javalette.Absyn.Expr.Visitor<X86CodeGenCtx, X86CodeGenCtx> {
 
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrIndex p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.ArrLen p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
+        public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.NewArr p, X86CodeGenCtx arg) {
+            return arg;
+        }
+
         public X86CodeGenCtx visit(jlc.lib.javalette.Absyn.EVar p, X86CodeGenCtx ctx) {
           // We first need to check if there is any temp register that has this vairable inside it
           Variable isTmpExist = ctx.GetVariableIfLoaded(p.ident_);
+          Variable localVar = ctx.GetVariableFromCtx(p.ident_);
+          ctx.lastLocalVariable = localVar;
           if (isTmpExist == null) {
             // We need to load the variable
-            Variable localVar = ctx.GetVariableFromCtx(p.ident_);
             isTmpExist = ctx.GetNewTempVairableWithTheSameTypeOf(localVar);
             ctx.instruction_of_ctx.add(new LoadIR(isTmpExist, localVar));
 
+            // System.out.printf("%s %s\n", localVar.GetVariableName(), isTmpExist.GetVariableName());
             // We store it as a vriable that has already loaded a local vriable
             ctx.AddVariabelAsLoaded(localVar.GetVariableName(), isTmpExist);
           }

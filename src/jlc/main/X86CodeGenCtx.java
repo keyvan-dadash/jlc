@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Stack;
 
 import jlc.main.Instructions.Instruction;
@@ -84,6 +86,8 @@ public class X86CodeGenCtx {
     public Function current_func;
 
     public Variable logic_local_variable;
+
+    public Variable lastLocalVariable;
 
     X86CodeGenCtx() {
         temp_variable_counter = 0;
@@ -268,6 +272,7 @@ public class X86CodeGenCtx {
             }
         } else {
             loaded_variables.put(renamedVar, tempVariable);
+            System.out.println(loaded_variables.size());
         }
     }
 
@@ -352,4 +357,36 @@ public class X86CodeGenCtx {
         return subCtx;
     }
     
+    // Lets try to find what is the loaded variable crrosponding local variable
+    public Variable findLoadedVariableName(Variable var) {
+        if (parent != null) {
+            Variable original = parent.findLoadedVariableName(var);
+            if (original != null) {
+                return original;
+            }
+        }
+
+        String renamed = null;
+        // System.out.printf("%s %d", var.GetVariableName(), loaded_variables.size());
+        for (Map.Entry<String, Variable> e : loaded_variables.entrySet()) {
+            // System.out.printf("k:%s v:%s\n", e.getKey(), e.getValue());
+            if (e.getValue().equals(var)) {
+                renamed = e.getKey();
+                break;
+            }
+        }
+        if (renamed == null) return null;
+
+        String original = null;
+        for (Map.Entry<String, String> e : mapped_varibles.entrySet()) {
+            // System.out.printf("k:%s v:%s\n", e.getKey(), e.getValue());
+            if (renamed.equals(e.getValue())) {
+                original = e.getKey();
+                break;
+            }
+        }
+        if (original == null) return null;
+
+        return ctx_variables.get(original);
+    }
 }
