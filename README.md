@@ -11,6 +11,8 @@ A compact, working compiler for the **Javalette** language with:
 
 This README is a **project description**—see `doc/doc.md` for course‑specific write‑up/details.
 
+For the full project specification and context, see the forked course description: **[tda283-project](https://github.com/keyvan-dadash/tda283-project)**.
+
 ---
 
 ## Features
