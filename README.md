@@ -47,13 +47,25 @@ cd jlc
 
 ---
 
-## Build the compiler
+## Setup (classpath for CUP/JLex)
+
+Point `CLASSPATH` at your local **JavaCUP/JLex** jars (and any other required jars).
 
 ```sh
-make        # builds the compiler into ./bin
+# Option A — set a directory that contains your CUP/JLex jars
+export JAVA_LIBS=/path/to/java-libs
+
+# Before building: CUP/JLex on the classpath
+export CLASSPATH=":.$JAVA_LIBS/*"
+
+# Build the compiler
+make    # builds into ./bin
+
+# After building: include ./bin so Main is runnable
+export CLASSPATH=":./bin:$JAVA_LIBS/*"
 ```
 
-This compiles the front‑end and both backends. The main entry point is `jlc.main.Main`.
+> You can also replace `$JAVA_LIBS/*` with explicit paths to the `.jar` files if you prefer.
 
 ---
 
@@ -88,8 +100,7 @@ java jlc.main.Main --x86 < src/test.jl   # writes NASM assembly to stdout
 1. Generate LLVM IR from a Javalette source file:
 
 ```sh
-# With explicit flag\ njava jlc.main.Main --llvm < src/test.jl  # writes LLVM IR to stdout
-# (The LLVM path may also be the default when no flag is given.)
+java jlc.main.Main --llvm < src/test.jl   # writes LLVM IR to stdout
 ```
 
 2. Build and link with the LLVM runtime:
